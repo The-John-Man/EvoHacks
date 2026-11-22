@@ -1,8 +1,14 @@
 # North American benefits coverage
 
-The next phase provides full screening flows for Canada and Mexico. Start with the [Cursor handoff](cursor-handoff.md), [screening specification](north-america-screening.md) and [country program backlog](country-programs.md). The directory described below is the initial implementation.
+The next phase provides full screening flows for Canada and Mexico. Start with the [Cursor handoff](cursor-handoff.md), [screening specification](north-america-screening.md) and [country program backlog](country-programs.md).
 
-The U.S. screener already asks about state, monthly USD income, insurance and federal enrollment. A parent looking for Canadian child benefits should reach the CRA before answering any of those questions. The homepage now identifies the U.S. route and offers an expandable directory for Canada and Mexico. The directory works with a keyboard and with JavaScript disabled. Its links carry no form values.
+## What is live on this branch
+
+Merged with `main`: the full **U.S.** screener (`Claimable.screen`, 20 federal programs). **Try an example** loads four U.S.-only demo households (`DEMOS` in `js/app.js`); they are not Canada or Mexico scenarios.
+
+This PR adds an expandable **Canada & Mexico official guides** block on the intro page (`details.country-guides` in `index.html`). It works with a keyboard and with JavaScript disabled and sends users to agency pages without posting form values.
+
+The U.S. form still asks about state, monthly USD income, insurance and federal enrollment. A parent looking for Canadian child benefits should use the official links before answering those questions. Full CA/MX intake and rules are not implemented yet.
 
 ## First two screening pilots
 
@@ -17,7 +23,7 @@ Mexico’s program directory summarizes requirements. The individual pension pag
 
 ## Implementation sequence
 
-1. **Directory (this PR).** Keep the U.S. intake and demo one click away. Offer official resources for Canada and Mexico before asking for household details.
+1. **Directory (done on this PR).** Keep the U.S. intake and demo one click away. Offer official resources for Canada and Mexico before asking for household details.
 2. **One program per pilot.** Add country-specific intake and rule modules when a pilot is ready. Route explicitly by jurisdiction before collecting answers. Keep answers scoped to that jurisdiction and clear them on a country change. Each program record needs an authority, source URL, effective period, last review date, required inputs, application route, currency and payment frequency. Unknown or unsupported answers should produce a referral. Exercise the published boundary cases and review native-language copy before enabling results.
 3. **Extend jurisdiction by jurisdiction.** Inventory Northern America, Central America and the Caribbean, including territories with distinct administering agencies. Record the local authority, languages, subnational variation, program sources and review status before listing a jurisdiction. Starting points include Belize’s retirement benefit, Barbados’s social insurance programs and Greenland’s citizen portal. Each needs a program-level review before screening. [UN geographic groupings](https://unstats.un.org/unsd/methodology/m49/) · [Belize Social Security Board](https://socialsecurity.org.bz/long-term-retirement-benefit/) · [Barbados NIS](https://www.nis.gov.bb/) · [Greenland citizen services](https://sullissivik.gl/)
 

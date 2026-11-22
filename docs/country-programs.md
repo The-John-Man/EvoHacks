@@ -1,5 +1,17 @@
 # Country program research backlog
 
+## How this maps onto Claimable today
+
+| Piece | Today | Planned CA/MX use |
+| --- | --- | --- |
+| `js/data.js` | U.S. FPL, state list, dollar estimates, `ClaimableData.asOf` | Country-specific constants in proposed `js/countries/*-data.js` modules |
+| `js/rules.js` | `Claimable.screen(household)` — pure U.S. program list and evaluators | Wrapped by a country dispatcher; U.S. path keeps this entry point for regression tests |
+| `js/app.js` | Single U.S. form → `readForm()` → `runScreen()` | Country-specific fields and validation before calling the dispatcher |
+| `index.html` | U.S. intake + `details.country-guides` referral links (five URLs) | Country/language controls and localized labels; guides remain for script-disabled users |
+| Tests | `tests/rules.test.js` asserts U.S. rules only | Add tests that CA/MX and invalid countries never invoke U.S. evaluators |
+
+Encoding a row in the tables below means adding sourced predicates to the appropriate country module, not extending `rules.js` until the dispatcher exists.
+
 ## Evidence status
 
 The earlier research inspected the Canadian Benefits Finder, CRA CCB eligibility page, Mexico's program directory and its older-adult pension detail page on November 21, 2026. The other programs below are implementation research leads. Retrieve their current official eligibility, calculation and application pages before encoding rules. This document intentionally leaves monetary constants unresolved because payment years and program rules change.

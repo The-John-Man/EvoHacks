@@ -1,5 +1,34 @@
 # Full Canadian and Mexican screening
 
+## Current shipped behavior
+
+This branch matches `main` for screening logic plus Canada/Mexico directory links on the intro view. There is no country dispatcher yet; the form and `Claimable.screen` pipeline are U.S.-only.
+
+| Area | What runs today |
+| --- | --- |
+| `index.html` | Intro with U.S. **Start** and **Try an example** (`details.demo`); expandable **Canada & Mexico official guides** (`details.country-guides`, five agency links, no form data); multi-step U.S. intake; results with category chips, print and read-aloud. Scripts: `js/data.js`, `js/rules.js`, `js/app.js`. |
+| `styles.css` | Layout, focus rings, large-text toggle, print styles, `country-guides` disclosure styling. |
+| `js/app.js` | `init` wires demos and navigation; `readForm` / `fillForm` / `validate` for the U.S. form; `runScreen` calls `Claimable.screen(readForm())`; `render` and `card` group results by status; `toggleSpeech` for read-aloud. |
+| `js/rules.js` | `Claimable.screen(household)` evaluates 20 federal programs, sorts by status, returns `ctx`, `results`, and `totals`. |
+| `js/data.js` | `ClaimableData`: states, FPL tables, program constants, `asOf` date. |
+| `tests/rules.test.js` | 12 Node tests; run with `node --test tests/rules.test.js`. |
+
+**Status keys** in code and tests: `likely`, `maybe`, `enrolled`, `unlikely`. The UI labels the `maybe` group **Worth checking** (`#list-maybe`, chips, summary text).
+
+**`readForm` coercion:** numeric fields use `parseFloat(...) || 0`, so a blank income field becomes **0**, not unknown. Checkboxes and empty child-age rows are handled separately; preserving “unknown vs zero” for future CA/MX income questions is a planned change.
+
+**`Claimable.screen` return shape today:**
+
+```js
+{
+  ctx: { size, pct, fplAnnual, grossAnnual },
+  results: [{ id, name, category, kind, blurb, apply, source, docs, status, reasons, annual, valueLabel }, ...],
+  totals: { likelyAnnual, maybeAnnual, likelyCount, maybeCount }
+}
+```
+
+Each `results[].status` is one of the four keys above; `reasons` is a string array; dollar estimates use USD in `annual` / `valueLabel` where present.
+
 ## User experience
 
 1. **Choose where you live.** Country and province/territory or state determine the programs. Offer all 13 Canadian provinces and territories and all 32 Mexican federal entities. Language is a separate preference. State the supported coverage near the start button.
@@ -35,7 +64,15 @@ For each threshold or formula, store the official source and effective dates. Ev
 
 ## Acceptance scenarios
 
-- U.S. sample households keep their existing results and all current Node tests pass.
+### Already expected (live U.S. app + this PR)
+
+- U.S. sample households keep their existing results and all 12 `node --test tests/rules.test.js` cases pass.
+- Intro shows Canada/Mexico official-guide links that work with keyboard and with JavaScript disabled; U.S. intake does not collect CA/MX household answers yet.
+- Status display uses the four keys above; `maybe` appears as “Worth checking” in the UI.
+- Print checklist, large-text mode, read-aloud, and progressive form steps work for the U.S. flow.
+
+### Future (full CA/MX screening)
+
 - A Canadian household can enter province, family/custody facts and the requested tax-year information, see a CCB assessment and print an application checklist.
 - A Canadian older adult sees the residence-history questions required for OAS and relevant income questions for GIS.
 - A Mexican adult aged 65 can answer nationality and residence questions and get a pension assessment with official registration instructions.
