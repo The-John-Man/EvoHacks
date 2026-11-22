@@ -21,9 +21,11 @@
   let filter = "all";
   let lastAnswers = null;
   let tracking = {}; // per program id: { appliedOn: "YYYY-MM-DD", done: {stepKey: bool}, notes: [{date, text}] }
+  let exampleTracking = {};
   const closedTimelines = new Set(); // timelines start open; remember the ones the user closes
   let selectedCountry = "US";
-  let pendingCountry = "US";
+  let activeExample = null;
+  let initialIntake;
 
   const DEMOS = {
     US: [
@@ -35,7 +37,7 @@
       {
         title: "James & Lena, family of five in Ohio",
         desc: "Married, 3 kids (1, 6, 11), $3,800/month, kids already on Medicaid",
-        data: { state: "OH", adults: 2, seniors: 0, married: true, adultWorkingAge: true, children: [1, 6, 11], earnedMonthly: 3800, otherMonthly: 0, rentMonthly: 1350, utilitiesMonthly: 240, housing: "rent", insurance: "employer", paysEnergy: true, behindUtilities: true, en_medicaid: true },
+        data: { state: "OH", adults: 2, seniors: 0, married: true, adultWorkingAge: true, children: [1, 6, 11], earnedMonthly: 3800, otherMonthly: 0, rentMonthly: 1350, utilitiesMonthly: 240, housing: "rent", insurance: "employer", paysEnergy: true, behindUtilities: true, enrolled: { medicaid: true } },
       },
       {
         title: "Dorothy, 71, living alone in Florida",
@@ -107,22 +109,19 @@
       el.setAttribute("title", t(el.getAttribute("data-i18n-title")));
     });
     updateCoverageNote();
-    updateIntroLead();
     updateDisclaimer();
     refreshDemos();
+    updateStepLabels();
+    $("#state").options[0].textContent = t("chooseState");
+    $("#province").options[0].textContent = t("chooseProvince");
+    $("#entity").options[0].textContent = t("chooseEntity");
+    refreshAuthUI();
     if (lastResult) render();
-  }
-
-  function updateIntroLead() {
-    const n = Countries.programCounts[selectedCountry] || 0;
-    const key = selectedCountry === "CA" ? "introLeadCA" : selectedCountry === "MX" ? "introLeadMX" : "introLeadUS";
-    $("#intro-lead").textContent = t(key, { n });
   }
 
   function updateCoverageNote() {
     const n = Countries.programCounts[selectedCountry] || 0;
-    const country = t("country" + selectedCountry);
-    $("#coverage-note").textContent = t("coverageNote", { n, country });
+    $("#coverage-note").textContent = t("coverageNote", { n });
   }
 
   function updateDisclaimer() {
@@ -142,11 +141,18 @@
     });
   }
 
+  function intakeSignature() {
+    // Child rows have no field names. Include unfinished rows as well as named controls.
+    return JSON.stringify([Array.from(new FormData(form)), $$(".kid-age").map((el) => el.value)]);
+  }
+
   function clearIntake() {
     form.reset();
     $("#kids").innerHTML = "";
     kidId = 0;
     lastResult = null;
+    lastAnswers = null;
+    activeExample = null;
     stopSpeech();
     // restore sensible defaults after reset
     if (form.elements.adultWorkingAge) form.elements.adultWorkingAge.checked = true;
@@ -157,37 +163,62 @@
     if (form.elements.mexicanNational) form.elements.mexicanNational.checked = true;
     if (form.elements.residesInMexico) form.elements.residesInMexico.checked = true;
     if (form.elements.adults) form.elements.adults.value = 1;
+    initialIntake = intakeSignature();
   }
 
   function setCountry(code, { confirmClear = false } = {}) {
     const next = Countries.normalizeCountry(code) || "US";
-    if (next === selectedCountry) {
-      pendingCountry = next;
-      return;
-    }
-    const hasAnswers = !!form.querySelector("input:checked, .kid-age") || step > 0 || lastResult;
-    if (confirmClear && hasAnswers && !window.confirm(t("switchCountryConfirm"))) {
-      // revert radio
-      const radio = document.querySelector(`input[name="country"][value="${selectedCountry}"]`);
-      if (radio) radio.checked = true;
+    if (next === selectedCountry) return;
+    if (confirmClear && initialIntake !== intakeSignature() && !window.confirm(t("switchCountryConfirm"))) {
+      const radio = $(`input[name="country"][value="${selectedCountry}"]`);
+      radio.checked = true;
+      radio.focus({ preventScroll: true });
       return;
     }
     selectedCountry = next;
-    pendingCountry = next;
+    $(`input[name="country"][value="${next}"]`).checked = true;
     clearIntake();
     syncCountryFields();
     updateCoverageNote();
-    updateIntroLead();
     updateDisclaimer();
     refreshDemos();
-    show("intro");
   }
 
   function refreshDemos() {
-    const list = DEMOS[selectedCountry] || [];
-    $("#demo-list").innerHTML = list.map((d, i) =>
-      `<button type="button" class="demo-btn" data-demo="${i}"><strong>${esc(d.title)}</strong><span>${esc(d.desc)}</span></button>`
+    const [featured, ...others] = DEMOS[selectedCountry];
+    const { results } = Countries.screen(selectedCountry, featured.data);
+    const match = results.find((r) => r.status === "likely" && r.reasons.length && r.docs.length)
+      || results.find((r) => r.status === "maybe" && r.reasons.length && r.docs.length);
+    $(".preview-stage").hidden = !match;
+    if (match) {
+      $("#preview-household").textContent = t("example" + selectedCountry);
+      $("#preview-status").textContent = t(match.status === "likely" ? "likelyTitle" : "maybeTitle");
+      $("#preview-name").textContent = match.name;
+      $("#preview-value").textContent = match.valueLabel;
+      $("#preview-reason").textContent = match.reasons[0];
+      $("#preview-document").textContent = match.docs[0];
+      const lang = selectedCountry === "MX" ? "es" : "en";
+      ["#preview-name", "#preview-value", "#preview-reason", "#preview-document"].forEach((id) => { $(id).lang = lang; });
+    }
+    const examples = match ? others : DEMOS[selectedCountry];
+    $("#demo-list").innerHTML = examples.map((d, i) =>
+      `<button type="button" class="demo-btn" data-demo="${match ? i + 1 : i}"><strong>${esc(d.title)}</strong><span>${esc(d.desc)}</span></button>`
     ).join("");
+  }
+
+  function openExample(index) {
+    activeExample = DEMOS[selectedCountry][index].data;
+    exampleTracking = {};
+    closedTimelines.clear();
+    runScreen();
+  }
+
+  function checklistAnswers() {
+    return activeExample || readForm();
+  }
+
+  function checklistTracking() {
+    return activeExample ? exampleTracking : tracking;
   }
 
   function init() {
@@ -197,6 +228,7 @@
       CAData.provinces.map(([code, name]) => `<option value="${code}">${name}</option>`).join("");
     $("#entity").innerHTML = `<option value="">${t("chooseEntity")}</option>` +
       MXData.entities.map(([code, name]) => `<option value="${code}">${name}</option>`).join("");
+    initialIntake = intakeSignature();
 
     try {
       const savedLang = localStorage.getItem("claimable-lang");
@@ -218,13 +250,10 @@
       r.addEventListener("change", () => setCountry(r.value, { confirmClear: true }));
     });
 
+    $("#open-example").addEventListener("click", () => openExample(0));
     $("#demo-list").addEventListener("click", (e) => {
       const b = e.target.closest("[data-demo]");
-      if (!b) return;
-      const demo = (DEMOS[selectedCountry] || [])[+b.dataset.demo];
-      if (!demo) return;
-      fillForm(demo.data);
-      runScreen();
+      if (b) openExample(Number(b.dataset.demo));
     });
 
     $("#start").addEventListener("click", () => {
@@ -234,6 +263,7 @@
         return;
       }
       setCountry(chosen.value);
+      activeExample = null;
       syncCountryFields();
       show("form");
       goStep(0);
@@ -247,12 +277,27 @@
       if (step < steps.length - 1) goStep(step + 1);
       else runScreen();
     });
-    $("#edit").addEventListener("click", () => { stopSpeech(); show("form"); goStep(0); });
+    $("#edit").addEventListener("click", () => {
+      if (activeExample) fillForm(activeExample);
+      stopSpeech();
+      show("form");
+      goStep(0);
+    });
     $("#print").addEventListener("click", () => window.print());
+    let printDetails = [];
+    window.addEventListener("beforeprint", () => {
+      if (currentView !== "results" || printDetails.length) return;
+      printDetails = $$(".card details:not([open])");
+      printDetails.forEach((detail) => { detail.open = true; });
+    });
+    window.addEventListener("afterprint", () => {
+      printDetails.forEach((detail) => { detail.open = false; });
+      printDetails = [];
+    });
     $("#read").addEventListener("click", toggleSpeech);
     $$(".chip").forEach((c) => c.addEventListener("click", () => {
       filter = c.dataset.filter;
-      $$(".chip").forEach((x) => x.setAttribute("aria-selected", String(x === c)));
+      $$(".chip").forEach((x) => x.setAttribute("aria-pressed", String(x === c)));
       render();
     }));
     initTimelines();
@@ -278,10 +323,12 @@
   }
 
   function show(name) {
+    const returningHome = name === "intro" && currentView !== "intro";
     currentView = name;
     Object.entries(views).forEach(([k, el]) => (el.hidden = k !== name));
     window.scrollTo(0, 0);
     refreshAuthUI();
+    if (returningHome) $("#intro-title").focus({ preventScroll: true });
   }
 
   // ---------- Optional sign-in (MojoAuth, OpenID Connect) ----------
@@ -293,28 +340,37 @@
     $("#sign-in").addEventListener("click", () => openSignIn({}));
     $("#sign-out").addEventListener("click", () => {
       $("#save-status").hidden = true;
-      tracking = {}; // don't leave the signed-out user's timelines on screen
+      tracking = {};
+      exampleTracking = {};
+      closedTimelines.clear();
+      pendingIntent = null;
+      clearIntake();
+      $$("#view-results .cards").forEach((list) => list.replaceChildren());
       show("intro");
       Auth.signOut();
     });
-    $("#signin-cancel").addEventListener("click", () => show(returnView));
+    $("#signin-cancel").addEventListener("click", () => {
+      show(returnView);
+      $(pendingIntent?.save ? "#save" : "#sign-in").focus();
+    });
     $("#signin-go").addEventListener("click", goToMojoAuth);
     $("#save").addEventListener("click", () => {
       if (Auth.user()) { saveChecklist(); return; }
       // Carry the answers through the redirect so the checklist is saved the moment they're back.
-      openSignIn({ save: true, answers: readForm(), tracking });
+      openSignIn({ save: true, answers: checklistAnswers(), tracking: checklistTracking() });
     });
     $("#open-saved").addEventListener("click", () => {
       const saved = Auth.loadSaved();
-      if (!saved) return;
-      fillForm(answersToForm(saved.answers));
-      runScreen();
+      if (saved) openSavedChecklist(saved.answers);
     });
     $("#delete-saved").addEventListener("click", () => {
-      if (!window.confirm("Delete your saved checklist from this device? This can't be undone.")) return;
+      if (!window.confirm(t("authConfirmDelete"))) return;
+      tracking = {};
+      exampleTracking = {};
+      closedTimelines.clear();
       Auth.deleteSaved();
-      $("#save-status").textContent = "Your saved checklist was deleted from this device.";
-      $("#save-status").hidden = false;
+      render();
+      showStatus("authDeleted");
     });
     refreshAuthUI();
     handleReturnFromLogin();
@@ -329,9 +385,8 @@
     if (!u) return;
     const saved = Auth.loadSaved();
     if (hash === "#saved" && saved) {
-      fillForm(answersToForm(saved.answers));
-      runScreen();
-      showStatus(`Signed in and saved for ${u.email || "your account"}. Sign in here anytime to reopen it.`);
+      openSavedChecklist(saved.answers);
+      showStatus("authSaved");
     }
   }
 
@@ -341,36 +396,36 @@
     pendingIntent = intent || {};
     $("#signin-error").hidden = true;
     show("signin");
-    $("#signin-go").focus({ preventScroll: true });
+    $("#signin-title").focus({ preventScroll: true });
   }
 
   function goToMojoAuth() {
     const btn = $("#signin-go");
     const err = $("#signin-error");
     btn.disabled = true;
-    btn.textContent = "Opening sign-in…";
+    btn.dataset.i18n = "authOpening";
+    btn.textContent = t(btn.dataset.i18n);
     err.hidden = true;
     Auth.startSignIn(pendingIntent).catch((e) => {
       btn.disabled = false;
-      btn.textContent = "Continue to sign in";
-      err.textContent = (e && e.message) || "Sign-in isn't available right now. You can keep using Claimable without an account.";
+      btn.dataset.i18n = "authContinue";
+      btn.textContent = t(btn.dataset.i18n);
+      err.textContent = (e && e.message) || t("authUnavailable");
       err.hidden = false;
     });
   }
 
-  function showStatus(text) {
+  function showStatus(key) {
     const status = $("#save-status");
-    status.textContent = text;
+    status.dataset.authMessage = key;
+    status.textContent = t(key, { account: Auth.user()?.email || t("authAccount") });
     status.hidden = false;
   }
 
   function saveChecklist() {
-    const u = Auth.user();
-    const ok = Auth.save(readForm());
-    if (ok && Auth.saveTracking) Auth.saveTracking(tracking);
-    showStatus(ok
-      ? `Saved on this device for ${u.email || "your account"}. Sign in here anytime to reopen it.`
-      : "Couldn't save. Your browser may be blocking storage (private mode?).");
+    const ok = Auth.save(checklistAnswers()) &&
+      Auth.saveTracking({ ...Auth.loadTracking(), ...checklistTracking() });
+    showStatus(ok ? "authSaved" : "authSaveFailed");
     refreshAuthUI();
   }
 
@@ -384,15 +439,26 @@
     const saved = u ? Auth.loadSaved() : null;
     $("#welcome-back").hidden = !saved;
     $("#delete-saved-wrap").hidden = !saved;
-    if (saved) $("#saved-date").textContent = new Date(saved.savedAt).toLocaleDateString("en-US", { month: "long", day: "numeric" });
+    if (saved) $("#saved-date").textContent = new Date(saved.savedAt).toLocaleDateString(I18n.speechLang(), { month: "long", day: "numeric" });
+    const status = $("#save-status");
+    if (!status.hidden && status.dataset.authMessage) showStatus(status.dataset.authMessage);
   }
 
-  /** Saved answers use the readForm() shape; turn them back into form field values. */
-  function answersToForm(a) {
-    const out = { ...a };
-    delete out.enrolled;
-    Object.entries(a.enrolled || {}).forEach(([k, v]) => (out["en_" + k] = v));
-    return out;
+  function openSavedChecklist(answers) {
+    // Each intake stores one region field, including checklists saved before the redesign.
+    const country = "province" in answers ? "CA" : "entity" in answers ? "MX" : "US";
+    setCountry(country);
+    fillForm(answers);
+    runScreen();
+  }
+
+  function updateStepLabels() {
+    const educationStep = selectedCountry === "MX";
+    $('.steps [data-step="1"] [data-i18n]').textContent = t(educationStep ? "intakeSchoolWork" : "stepIncome");
+    steps[1].querySelector("legend").textContent = t(educationStep ? "intakeSchoolWork" : "intakeIncome");
+    $("#step-count").textContent = t("intakeStep", { n: step + 1, total: steps.length });
+    $("#next").textContent = t(step === steps.length - 1 ? "seeResults" : "next");
+    $("#back").textContent = t(step === 0 ? "cancel" : "back");
   }
 
   function goStep(n) {
@@ -403,13 +469,10 @@
       li.classList.toggle("done", i < n);
       if (i === n) li.setAttribute("aria-current", "step"); else li.removeAttribute("aria-current");
     });
-    $("#next").textContent = n === steps.length - 1 ? t("seeResults") : t("next");
-    $("#back").textContent = n === 0 ? t("cancel") : t("back");
-    $("#form-error").hidden = true;
+    updateStepLabels();
+    clearFormError();
     window.scrollTo(0, 0);
-    const focusTarget = Array.from(steps[n].querySelectorAll("select, input"))
-      .find((el) => !el.closest("[hidden]"));
-    if (focusTarget) focusTarget.focus({ preventScroll: true });
+    steps[n].querySelector("legend").focus({ preventScroll: true });
   }
 
   let kidId = 0;
@@ -417,12 +480,19 @@
     const id = "kid-" + kidId++;
     const row = document.createElement("div");
     row.className = "kid-row";
-    row.innerHTML = `<div><label for="${id}">Child's age</label>
-      <input id="${id}" class="kid-age" type="number" inputmode="numeric" min="0" max="18" value="${age ?? ""}" placeholder="e.g. 4"></div>
-      <button type="button" class="btn btn-ghost" aria-label="Remove this child">Remove</button>`;
-    row.querySelector("button").addEventListener("click", () => row.remove());
+    row.innerHTML = `<div><label for="${id}" data-i18n="intakeChildAge">${esc(t("intakeChildAge"))}</label>
+      <input id="${id}" class="kid-age" type="number" inputmode="numeric" min="0" max="18"></div>
+      <button type="button" class="btn btn-ghost" data-i18n="intakeRemove" data-i18n-aria="intakeRemoveChild"
+        aria-label="${esc(t("intakeRemoveChild"))}">${esc(t("intakeRemove"))}</button>`;
+    const input = row.querySelector("input");
+    input.value = age ?? "";
+    row.querySelector("button").addEventListener("click", () => {
+      if (input.getAttribute("aria-invalid") === "true") clearFormError();
+      row.remove();
+      $("#add-kid").focus();
+    });
     $("#kids").appendChild(row);
-    if (age === undefined) row.querySelector("input").focus();
+    if (age === undefined) input.focus();
   }
 
   function optNum(name) {
@@ -539,47 +609,64 @@
       if (el.type === "checkbox") el.checked = !!v;
       else if (v !== null && v !== undefined) el.value = v;
     });
-    // enrolled flags as en_* flat keys in demos
-    Object.keys(d).forEach((k) => {
-      if (k.startsWith("en_")) {
-        const el = form.elements[k];
-        if (el) el.checked = !!d[k];
-      }
-    });
+    initialIntake = intakeSignature();
+  }
+
+  function clearFormError() {
+    const previous = form.querySelector('[aria-invalid="true"]');
+    if (previous) {
+      previous.removeAttribute("aria-invalid");
+      previous.removeAttribute("aria-errormessage");
+    }
+    const err = $("#form-error");
+    err.hidden = true;
+    delete err.dataset.i18n;
+    form.querySelector(".nav").before(err);
   }
 
   function validate() {
+    clearFormError();
     const err = $("#form-error");
-    let msg = "";
+    let field, messageKey;
     if (step === 0) {
-      if (selectedCountry === "US" && !form.elements.state.value) msg = t("errState");
-      else if (selectedCountry === "CA" && !form.elements.province.value) msg = t("errProvince");
-      else if (selectedCountry === "MX" && !form.elements.entity.value) msg = t("errEntity");
-      else if ((+form.elements.seniors.value || 0) > (+form.elements.adults.value || 1)) msg = t("errSeniors");
-      else if ($$(".kid-age").some((i) => i.value === "" || +i.value < 0 || +i.value > 18)) msg = t("errKids");
-      else if ((selectedCountry === "CA" || selectedCountry === "MX") && form.elements.applicantAge.value === "") msg = t("errAge");
+      const location = { US: ["state", "errState"], CA: ["province", "errProvince"], MX: ["entity", "errEntity"] }[selectedCountry];
+      const child = $$(".kid-age").find((i) => i.value === "" || +i.value < 0 || +i.value > 18);
+      if (!form.elements[location[0]].value) {
+        field = form.elements[location[0]];
+        messageKey = location[1];
+      } else if ((+form.elements.seniors.value || 0) > (+form.elements.adults.value || 1)) {
+        field = form.elements.seniors;
+        messageKey = "errSeniors";
+      } else if (child) {
+        field = child;
+        messageKey = "errKids";
+      } else if (selectedCountry !== "US" && form.elements.applicantAge.value === "") {
+        field = form.elements.applicantAge;
+        messageKey = "errAge";
+      }
     }
-    if (step === 1 && selectedCountry === "US") {
-      const bad = ["earnedMonthly", "otherMonthly", "rentMonthly", "utilitiesMonthly"].find((k) => {
-        const el = form.elements[k];
-        return el && el.value !== "" && +el.value < 0;
-      });
-      if (bad) msg = t("errNegative");
+    if (step === 1) {
+      const amounts = { US: ["earnedMonthly", "otherMonthly", "rentMonthly", "utilitiesMonthly"], CA: ["afniAnnual"], MX: [] };
+      field = amounts[selectedCountry].map((name) => form.elements[name]).find((el) => el.value !== "" && +el.value < 0);
+      messageKey = "errNegative";
     }
-    if (step === 1 && selectedCountry === "CA") {
-      if (form.elements.afniAnnual.value !== "" && +form.elements.afniAnnual.value < 0) msg = t("errNegative");
-    }
-    err.textContent = msg;
-    err.hidden = !msg;
-    return !msg;
+    if (!field) return true;
+    err.textContent = t(messageKey);
+    err.dataset.i18n = messageKey;
+    err.hidden = false;
+    const control = field.closest(".money, #kids") || field;
+    control.after(err);
+    field.setAttribute("aria-invalid", "true");
+    field.setAttribute("aria-errormessage", err.id);
+    field.focus();
+    return false;
   }
 
   function runScreen() {
     try {
-      lastAnswers = readForm();
+      lastAnswers = checklistAnswers();
       lastResult = Countries.screen(selectedCountry, lastAnswers);
-      const savedTracking = Auth.user() && Auth.loadTracking ? Auth.loadTracking() : null;
-      if (savedTracking) tracking = savedTracking;
+      if (!activeExample && Auth.user()) tracking = Auth.loadTracking() || {};
     } catch (e) {
       $("#form-error").textContent = e.message || t("startNeedCountry");
       $("#form-error").hidden = false;
@@ -588,15 +675,15 @@
     const saveStatus = $("#save-status");
     if (saveStatus) saveStatus.hidden = true;
     filter = "all";
-    $$(".chip").forEach((x) => x.setAttribute("aria-selected", String(x.dataset.filter === "all")));
+    $$(".chip").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.filter === "all")));
     updateDisclaimer();
     render();
     show("results");
-    views.results.focus();
+    views.results.focus({ preventScroll: true });
   }
 
   function placeName() {
-    const h = readForm();
+    const h = checklistAnswers();
     if (selectedCountry === "CA") {
       return (CAData.provinces.find(([c]) => c === h.province) || [, ""])[1];
     }
@@ -609,6 +696,7 @@
   function render() {
     if (!lastResult) return;
     const { results, totals, ctx, currency } = lastResult;
+    $("#results-title").textContent = t(activeExample ? "previewKicker" : "checklistTitle");
     const place = placeName();
     if (selectedCountry === "US") {
       $("#results-household").textContent = t("householdUS", { size: ctx.size, place, pct: Math.round(ctx.pct || 0) });
@@ -618,25 +706,35 @@
       $("#results-household").textContent = t("householdMX", { size: ctx.size, place });
     }
 
-    if (totals.likelyAnnual > 0) {
-      $("#results-title").textContent = t("titleMoney", { money: money(totals.likelyAnnual, currency) });
-    } else if (totals.likelyCount > 0) {
-      $("#results-title").textContent = t("titleCount", { n: totals.likelyCount });
-    } else {
-      $("#results-title").textContent = t("titleNone");
+    const hasEstimate = totals.likelyAnnual > 0;
+    $("#estimate-label").textContent = t(hasEstimate ? "checklistAnnual" : "checklistMatchCount");
+    $("#estimate-value").textContent = hasEstimate ? money(totals.likelyAnnual, currency) : totals.likelyCount;
+    const summary = [];
+    if (hasEstimate) summary.push(t(totals.likelyCount === 1 ? "checklistOne" : "checklistMany", { n: totals.likelyCount }));
+    if (totals.maybeCount) {
+      summary.push(t(totals.maybeAnnual ? "checklistMaybeValue" : "checklistMaybe", {
+        n: totals.maybeCount, amount: money(totals.maybeAnnual, currency)
+      }));
     }
-    const maybe = totals.maybeCount
-      ? t("subMaybe", { n: totals.maybeCount }) + (totals.maybeAnnual ? ` (up to ${money(totals.maybeAnnual, currency)})` : "")
-      : "";
-    $("#results-sub").textContent = t("subLine", { likely: totals.likelyCount, maybe });
+    $("#results-sub").textContent = summary.join(" · ") || t("checklistNoMaybe");
 
-    const known = new Set(["Food", "Taxes", "Health", "Utilities", "Children", "Seniors"]);
-    const pass = (r) => filter === "all" ||
-      (filter === "other" ? !known.has(r.category) : r.category === filter);
-    const by = (s) => results.filter((r) => r.status === s);
-
-    fillList("#list-likely", by("likely").filter(pass), t("emptyLikely"));
-    fillList("#list-maybe", by("maybe").filter(pass), t("emptyMaybe"));
+    const categories = new Set(["Food", "Taxes", "Health", "Utilities", "Children", "Seniors"]);
+    const categoryFilter = ({ category }) => {
+      if (category === "Childcare & school") return "Children";
+      return categories.has(category) ? category : "other";
+    };
+    const present = new Set(results.map(categoryFilter));
+    $$(".chip").forEach((chip) => {
+      chip.hidden = chip.dataset.filter !== "all" && !present.has(chip.dataset.filter);
+    });
+    const matches = filter === "all" ? results : results.filter((r) => categoryFilter(r) === filter);
+    const by = (s) => matches.filter((r) => r.status === s);
+    const likely = by("likely");
+    const maybe = by("maybe");
+    fillList("#list-likely", likely, t("emptyLikely"));
+    fillList("#list-maybe", maybe, t("emptyMaybe"));
+    $("#count-likely").textContent = likely.length;
+    $("#count-maybe").textContent = maybe.length;
     fillList("#list-enrolled", by("enrolled"), t("none"), true);
     fillList("#list-unlikely", by("unlikely"), t("none"), true);
     $("#count-enrolled").textContent = by("enrolled").length;
@@ -657,7 +755,7 @@
   function timelineBlock(r) {
     const T = window.ClaimableTiming;
     if (!T || !lastAnswers || (r.status !== "likely" && r.status !== "maybe")) return "";
-    const tr = tracking[r.id] || {};
+    const tr = checklistTracking()[r.id] || {};
     // No date entered yet: assume the application date is today and show the estimated timeline.
     const assumed = !tr.appliedOn;
     // Tax credits are claimed by filing during tax season, so "today" can't be the filing date:
@@ -704,7 +802,7 @@
     ).join("");
 
     let saveLine;
-    if (!Auth.enabled) saveLine = esc(t("tlPageOnly"));
+    if (!Auth.enabled || activeExample) saveLine = esc(t("tlPageOnly"));
     else if (Auth.user()) saveLine = esc(t("tlSavedFor", { email: Auth.user().email || "your account" }));
     else saveLine = `${esc(t("tlNotSaved"))} <button type="button" class="linklike" data-act="signin-save">${esc(t("tlSignInSave"))}</button>`;
 
@@ -732,10 +830,12 @@
   }
 
   function updateTracking(id, fn, focusSel) {
-    const tr = { done: {}, notes: [], ...(tracking[id] || {}) };
+    if (!activeExample && Auth.user()) tracking = Auth.loadTracking() || {};
+    const current = checklistTracking();
+    const tr = { done: {}, notes: [], ...(current[id] || {}) };
     fn(tr);
-    tracking[id] = tr;
-    if (Auth.user && Auth.user() && Auth.saveTracking) Auth.saveTracking(tracking);
+    current[id] = tr;
+    if (!activeExample && Auth.user()) Auth.saveTracking(current);
     rerenderCard(id, focusSel);
   }
 
@@ -777,7 +877,7 @@
       const act = el.dataset.act;
       if (act === "clear") updateTracking(id, (tr) => { tr.appliedOn = null; tr.done = {}; }, '[data-act="applied"]');
       else if (act === "del-note") updateTracking(id, (tr) => { tr.notes = tr.notes.filter((_, i) => i !== +el.dataset.index); }, '[data-act="applied"]');
-      else if (act === "signin-save") openSignIn({ save: true, answers: readForm(), tracking });
+      else if (act === "signin-save") openSignIn({ save: true, answers: checklistAnswers(), tracking: checklistTracking() });
     });
   }
 
@@ -792,29 +892,38 @@
   }
 
   function card(r, compact) {
+    const categoryKeys = {
+      Food: "filterFood", Taxes: "filterTaxes", Health: "filterHealth", Utilities: "filterUtilities",
+      Children: "filterChildren", Seniors: "filterSeniors", "Childcare & school": "categorySchool",
+      "Cash help": "categoryCash", Housing: "categoryHousing", Disability: "categoryDisability",
+      Education: "categoryEducation", Work: "categoryWork"
+    };
+    const category = esc(categoryKeys[r.category] ? t(categoryKeys[r.category]) : r.category);
+    const heading = `<div><span class="tag">${category}</span><h3>${esc(r.name)}</h3></div>`;
+    const source = `<a class="source" href="${esc(r.source.url)}" target="_blank" rel="noopener">${esc(t("checklistSource"))} · ${esc(r.source.label)}</a>`;
     const why = r.reasons.length ? `<ul class="why">${r.reasons.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
-    const missing = (r.missingQuestions && r.missingQuestions.length)
-      ? `<p class="hint small">Follow-up: ${esc(r.missingQuestions.join(", "))}</p>` : "";
-    const avail = r.applicationAvailability
-      ? `<p class="hint small">Application: ${esc(r.applicationAvailability)}</p>` : "";
     if (compact) {
-      return `<article class="card ${r.status}"><div class="card-head"><div><span class="tag">${esc(r.category)}</span><h3>${esc(r.name)}</h3></div></div>${why}</article>`;
+      return `<article class="card ${r.status}"><div class="card-head">${heading}</div>${why}<div class="card-foot">${source}</div></article>`;
     }
+    const missing = (r.missingQuestions && r.missingQuestions.length)
+      ? `<p class="hint small"><strong>${esc(t("checklistFollowup"))}</strong> · ${esc(r.missingQuestions.map((key) => form.elements[key]?.labels?.[0]?.textContent.trim() || key).join(", "))}</p>` : "";
+    const avail = r.applicationAvailability
+      ? `<p class="hint small"><strong>${esc(t("checklistAvailability"))}</strong> · ${esc(r.applicationAvailability)}</p>` : "";
     return `<article class="card ${r.status}" data-id="${esc(r.id)}" aria-label="${esc(r.name)}">
       <div class="card-head">
-        <div><span class="tag">${esc(r.category)}</span><h3>${esc(r.name)}</h3></div>
+        ${heading}
         ${r.valueLabel ? `<div class="value">${esc(r.valueLabel)}</div>` : ""}
       </div>
       ${timelineBlock(r)}
       <p class="blurb">${esc(r.blurb)}</p>
-      <p class="label-like small" style="margin:8px 0 2px">${esc(t("whyLabel"))}</p>
+      <p class="reasons-label">${esc(t("whyLabel"))}</p>
       ${why}
       ${missing}
       ${avail}
       <details><summary>${esc(t("docsLabel"))}</summary><ul class="docs">${r.docs.map((d) => `<li>${esc(d)}</li>`).join("")}</ul></details>
       <div class="card-foot">
-        <a class="btn btn-primary" href="${esc(r.apply.url)}" target="_blank" rel="noopener">${esc(r.apply.label)} ↗</a>
-        <a class="source" href="${esc(r.source.url)}" target="_blank" rel="noopener">Source: ${esc(r.source.label)}</a>
+        <a class="apply-link" href="${esc(r.apply.url)}" target="_blank" rel="noopener">${esc(r.apply.label)} <span aria-hidden="true">↗</span></a>
+        ${source}
       </div>
     </article>`;
   }
@@ -823,20 +932,21 @@
     if (!("speechSynthesis" in window)) { alert(t("speechUnsupported")); return; }
     if (speechSynthesis.speaking) { stopSpeech(); return; }
     const { results } = lastResult;
-    const lines = [$("#results-title").textContent, $("#results-sub").textContent];
+    const lines = [$("#results-title").textContent, $("#results-household").textContent,
+      $("#estimate-label").textContent, $("#estimate-value").textContent, $("#results-sub").textContent];
     results.filter((r) => r.status === "likely").forEach((r) => {
       lines.push(`${r.name}. ${r.valueLabel}. ${r.reasons.join(" ")}`);
     });
     const u = new SpeechSynthesisUtterance(lines.join(" \n"));
     u.lang = I18n.speechLang();
     u.rate = 0.95;
-    u.onend = () => ($("#read").textContent = t("read"));
-    $("#read").textContent = t("stopRead");
+    u.onend = () => ($("#read").textContent = t("checklistRead"));
+    $("#read").textContent = t("checklistStop");
     speechSynthesis.speak(u);
   }
   function stopSpeech() {
     if ("speechSynthesis" in window) speechSynthesis.cancel();
-    if ($("#read")) $("#read").textContent = t("read");
+    if ($("#read")) $("#read").textContent = t("checklistRead");
   }
 
   init();

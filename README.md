@@ -16,7 +16,7 @@ No build step and no dependencies. Open `index.html` in a browser, or serve the 
 python -m http.server 5317
 ```
 
-Then visit http://localhost:5317. Choose a country and language, or open **Try an example household**.
+Then visit http://localhost:5317. Choose a country and select **Check my benefits** to start. Select **View full example** to explore that country's sample checklist.
 
 ## Test it
 
@@ -72,7 +72,9 @@ OIDC tokens are kept in `sessionStorage` for that tab only, and are used only to
 
 ```
 index.html              Country + language chooser, 3-step form, results, optional sign-in
-styles.css              Themes, large-text mode, print checklist
+styles.css              Dark theme, landing page, large-text mode
+inner.css               Questionnaire, results, print checklist
+auth-ui.css             Optional sign-in and callback screens
 js/data.js + rules.js   U.S. engine (Claimable.screen) — unchanged public API
 js/countries/ca-*.js    Canada data + evaluators (CCB, OAS, GIS, CDB, CDCP)
 js/countries/mx-*.js    Mexico data + evaluators (pensiones, becas, JCF)

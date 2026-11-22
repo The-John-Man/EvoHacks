@@ -6,33 +6,60 @@
   <title>Signing you in · Claimable</title>
   <meta name="referrer" content="no-referrer">
   <link rel="stylesheet" href="../../styles.css">
+  <link rel="stylesheet" href="../../auth-ui.css">
+  <link rel="icon" href="../../assets/claimable.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#080a09">
 </head>
-<body>
-  <main class="wrap view" aria-live="polite">
-    <h1 id="msg">Signing you in…</h1>
-    <p class="lead" id="detail">One moment.</p>
-    <p id="home-wrap" hidden><a class="btn btn-primary" id="home" href="../../">Back to Claimable</a></p>
+<body class="auth-callback">
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" id="callback-brand" href="../../"><span class="brand-mark" aria-hidden="true"></span>Claimable</a>
+    </div>
+  </header>
+  <main class="auth-callback-main" aria-labelledby="msg">
+    <div class="auth-sheet auth-return" aria-live="polite" aria-atomic="true">
+      <span class="auth-lock" aria-hidden="true"></span>
+      <h1 id="msg">Signing you in…</h1>
+      <p class="auth-lead" id="detail">You'll return to Claimable in a moment.</p>
+      <div id="home-wrap" hidden><a class="btn btn-primary" id="home" href="../../">Back to Claimable</a></div>
+    </div>
   </main>
   <script src="../../js/config.js"></script>
+  <script src="../../js/i18n.js"></script>
   <script src="../../js/auth.js"></script>
   <script>
     (function () {
       var Auth = window.ClaimableAuth;
       var home = Auth.base;
+      var i18n = window.ClaimableI18n;
+      try {
+        i18n.setLang(localStorage.getItem("claimable-lang"));
+        document.documentElement.classList.toggle("large", localStorage.getItem("claimable-large") === "1");
+      } catch (_) { /* Browser storage may be unavailable. */ }
+      document.documentElement.lang = i18n.getLang();
+      var msg = document.getElementById("msg");
+      var detail = document.getElementById("detail");
+      var backLink = document.getElementById("home");
+      document.getElementById("callback-brand").href = home;
+      msg.textContent = i18n.t("authSigningIn");
+      detail.textContent = i18n.t("authReturning");
+      document.title = msg.textContent + " · Claimable";
+      backLink.href = home;
+      backLink.textContent = i18n.t("authBack");
       function fail(text) {
-        document.getElementById("msg").textContent = "Sign-in didn't finish";
-        document.getElementById("detail").textContent = text;
-        document.getElementById("home").href = home;
+        msg.textContent = i18n.t("authIncomplete");
+        detail.textContent = text;
+        document.title = msg.textContent + " · Claimable";
         document.getElementById("home-wrap").hidden = false;
       }
       var params = new URLSearchParams(location.search);
       if (params.get("error")) {
         // e.g. the user cancelled on MojoAuth's page
-        return fail(params.get("error_description") || "Sign-in was cancelled. You can keep using Claimable without an account.");
+        return fail(params.get("error_description") || i18n.t("authCancelled"));
       }
       Auth.completeSignIn()
         .then(function (r) { location.replace(home + (r.saved ? "#saved" : "#signed-in")); })
-        .catch(function (e) { fail((e && e.message) || "Please try again."); });
+        .catch(function (e) { fail((e && e.message) || i18n.t("authRetry")); });
     })();
   </script>
 </body>

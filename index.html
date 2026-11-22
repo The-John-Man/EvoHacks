@@ -6,28 +6,32 @@
   <title>Claimable: Find Benefits You're Missing</title>
   <meta name="description" content="Answer a few questions and see which government programs and services your household may qualify for in the U.S., Canada, or Mexico. Nothing you type leaves your device.">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="inner.css">
+  <link rel="stylesheet" href="auth-ui.css">
+  <link rel="icon" href="assets/claimable.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#080a09">
 </head>
 <body>
   <a class="skip" href="#main" data-i18n="skip">Skip to content</a>
   <header class="topbar">
     <div class="wrap topbar-inner">
       <a class="brand" href="#" id="brand-home" aria-label="Claimable home" data-i18n-aria="brandHome">
-        <span class="brand-mark" aria-hidden="true">$</span> Claimable
+        <span class="brand-mark" aria-hidden="true"></span> Claimable
       </a>
       <div class="tools">
         <label class="tool-lang" for="lang-select"><span class="sr-only" data-i18n="langLabel">Language</span>
-          <select id="lang-select" aria-label="Language">
+          <select id="lang-select" aria-label="Language" data-i18n-aria="langLabel">
             <option value="en">English</option>
             <option value="fr">Français</option>
             <option value="es">Español</option>
           </select>
         </label>
+        <button type="button" class="tool" id="text-size" aria-pressed="false" aria-label="Larger text" title="Larger text" data-i18n-title="textSize" data-i18n-aria="textSize">A+</button>
         <span class="account" id="account" hidden>
           <span class="account-email" id="account-email"></span>
-          <button type="button" class="tool tool-text" id="sign-out">Sign out</button>
+          <button type="button" class="tool tool-text" id="sign-out" data-i18n="signOut">Sign out</button>
         </span>
-        <button type="button" class="tool tool-text" id="sign-in" hidden>Sign in</button>
-        <button type="button" class="tool" id="text-size" aria-pressed="false" title="Larger text" data-i18n-title="textSize">A+</button>
+        <button type="button" class="tool tool-text" id="sign-in" data-i18n="signIn" hidden>Sign in</button>
       </div>
     </div>
   </header>
@@ -35,91 +39,134 @@
   <main id="main" class="wrap">
     <!-- Landing -->
     <section id="view-intro" class="view" aria-labelledby="intro-title">
-      <p class="eyebrow" data-i18n="eyebrow">Free · Private · 3 minutes</p>
-      <h1 id="intro-title" data-i18n="introTitle">Are you leaving money on the table?</h1>
-      <p class="lead" id="intro-lead">Billions of dollars in food, tax credits, health coverage, and utility help go unclaimed every year. Answer a few questions and we'll check <strong>20 U.S. federal programs</strong> for you.</p>
-      <ul class="trust">
-        <li data-i18n="trustPrivate"><strong>Private.</strong> Nothing you type leaves this device. No account required, no tracking.</li>
-        <li data-i18n="trustClear"><strong>Clear.</strong> We show exactly why you may qualify, using published official rules.</li>
-        <li data-i18n="trustUseful"><strong>Useful.</strong> You get a checklist of what to bring and where to apply.</li>
-      </ul>
-
-      <div class="chooser" role="group" aria-labelledby="country-label">
-        <p class="label-like" id="country-label" data-i18n="countryLabel">Where do you live?</p>
-        <div class="chooser-row" id="country-choices">
-          <label class="choice"><input type="radio" name="country" value="US" checked> <span data-i18n="countryUS">United States</span></label>
-          <label class="choice"><input type="radio" name="country" value="CA"> <span data-i18n="countryCA">Canada</span></label>
-          <label class="choice"><input type="radio" name="country" value="MX"> <span data-i18n="countryMX">Mexico</span></label>
+      <div class="landing-hero">
+        <div class="landing-intake">
+          <p class="landing-meta" data-i18n="eyebrow">Free · About 3 minutes</p>
+          <h1 id="intro-title" tabindex="-1" data-i18n="introTitle">Find benefits your household may qualify for.</h1>
+          <p class="lead" id="intro-lead" data-i18n="introLead">Answer a few questions to see your matches, the documents you’ll need, and where to apply.</p>
+          <div class="chooser" role="radiogroup" aria-labelledby="country-label">
+            <p class="label-like" id="country-label" data-i18n="countryLabel">Where do you live?</p>
+            <div class="chooser-row" id="country-choices">
+              <label class="choice"><input type="radio" name="country" value="US" checked><span class="choice-flag" data-country="US" aria-hidden="true"></span><span data-i18n="countryUS">United States</span></label>
+              <label class="choice"><input type="radio" name="country" value="CA"><span class="choice-flag" data-country="CA" aria-hidden="true"></span><span data-i18n="countryCA">Canada</span></label>
+              <label class="choice"><input type="radio" name="country" value="MX"><span class="choice-flag" data-country="MX" aria-hidden="true"></span><span data-i18n="countryMX">Mexico</span></label>
+            </div>
+            <p class="hint small" id="coverage-note" aria-live="polite">We’ll check 20 federal programs.</p>
+          </div>
+          <button type="button" class="btn btn-primary btn-lg" id="start"><span data-i18n="start">Check my benefits</span></button>
         </div>
-        <p class="hint small" id="coverage-note"></p>
+        <div class="preview-stage" hidden>
+          <article class="preview-sheet" aria-labelledby="preview-household">
+            <div class="preview-heading">
+              <span class="preview-icon" aria-hidden="true"></span>
+              <div>
+                <p class="preview-kicker" data-i18n="previewKicker">Example checklist</p>
+                <h2 id="preview-household"></h2>
+              </div>
+            </div>
+            <div class="preview-program">
+              <span class="preview-status" id="preview-status"></span>
+              <h3 id="preview-name"></h3>
+              <p id="preview-value"></p>
+            </div>
+            <div class="preview-row">
+              <span class="preview-check" aria-hidden="true"></span>
+              <div><p class="preview-label" data-i18n="previewReason">Why this matches</p><p id="preview-reason"></p></div>
+            </div>
+            <div class="preview-row">
+              <span class="preview-doc" aria-hidden="true"></span>
+              <div><p class="preview-label" data-i18n="docsLabel">What to bring</p><p id="preview-document"></p></div>
+            </div>
+            <button type="button" id="open-example" class="preview-action"><span data-i18n="openExample">View full example</span></button>
+          </article>
+        </div>
       </div>
-
-      <div class="welcome-back" id="welcome-back" hidden>
-        <p><strong>Welcome back.</strong> You saved a checklist on <span id="saved-date"></span>.</p>
-        <button type="button" class="btn btn-primary" id="open-saved">Open my saved checklist</button>
+      <ul class="trust-strip">
+        <li><span class="trust-icon" data-icon="lock" aria-hidden="true"></span><div><strong data-i18n="trustPrivateHeading">Private by design</strong><p data-i18n="trustPrivate">Your household answers stay on this device.</p></div></li>
+        <li><span class="trust-icon" data-icon="list" aria-hidden="true"></span><div><strong data-i18n="trustClearHeading">Official rules</strong><p data-i18n="trustClear">See the agency source behind each match.</p></div></li>
+        <li><span class="trust-icon" data-icon="check" aria-hidden="true"></span><div><strong data-i18n="trustUsefulHeading">A checklist to keep</strong><p data-i18n="trustUseful">Take your document list with you when you apply.</p></div></li>
+      </ul>
+      <div class="landing-resources">
+        <div class="welcome-back" id="welcome-back" hidden>
+          <p><strong data-i18n="savedChecklist">Saved checklist</strong> <span id="saved-date"></span></p>
+          <button type="button" class="btn btn-primary" id="open-saved" data-i18n="openSaved">Open my saved checklist</button>
+        </div>
+        <details class="demo">
+          <summary data-i18n="demoSummary">More example households</summary>
+          <div class="demo-list" id="demo-list"></div>
+        </details>
+        <details class="country-guides">
+          <summary data-i18n="guidesSummary">Official agency links</summary>
+          <p data-i18n="guidesIntro">Visit these agencies for benefit details and applications.</p>
+          <section aria-labelledby="guide-ca">
+            <h2 id="guide-ca" data-i18n="guideCA">Canada</h2>
+            <p data-i18n="guideCABlurb">Federal benefits and links to your province or territory.</p>
+            <ul>
+              <li>Benefits Finder · <a href="https://www.canada.ca/en/services/benefits/finder.html" aria-label="Benefits Finder in English">English</a> · <a lang="fr" href="https://www.canada.ca/fr/services/prestations/chercheur.html" aria-label="Chercheur de prestations en français">Français</a></li>
+              <li><a href="https://www.canada.ca/en/revenue-agency/services/child-family-benefits/canada-child-benefit-overview.html">Canada Child Benefit (CRA)</a></li>
+              <li><a href="https://www.canada.ca/en/services/benefits/publicpensions.html">Public pensions (OAS / GIS)</a></li>
+            </ul>
+          </section>
+          <section aria-labelledby="guide-mx" lang="es">
+            <h2 id="guide-mx" data-i18n="guideMX">México</h2>
+            <p data-i18n="guideMXBlurb">Consulta los requisitos, documentos y fechas de registro de los programas federales.</p>
+            <ul>
+              <li><a href="https://www.programasparaelbienestar.gob.mx/">Programas para el Bienestar</a></li>
+              <li><a href="https://www.programasparaelbienestar.gob.mx/programas/adultos-mayores/pension-para-personas-adultas-mayores/">Pensión para personas adultas mayores</a></li>
+            </ul>
+          </section>
+          <section aria-labelledby="guide-us">
+            <h2 id="guide-us" data-i18n="countryUS">United States</h2>
+            <ul>
+              <li><a href="https://www.usa.gov/benefits">USA.gov benefits</a></li>
+            </ul>
+          </section>
+        </details>
       </div>
-      <button type="button" class="btn btn-primary btn-lg" id="start" data-i18n="start">Check my benefits</button>
-      <details class="demo">
-        <summary data-i18n="demoSummary">Try an example household</summary>
-        <div class="demo-list" id="demo-list"></div>
-      </details>
-      <details class="country-guides">
-        <summary data-i18n="guidesSummary">Official agency links</summary>
-        <p data-i18n="guidesIntro">Useful if you prefer the agency site, or if JavaScript is off.</p>
-        <section aria-labelledby="guide-ca">
-          <h2 id="guide-ca" data-i18n="guideCA">Canada</h2>
-          <p data-i18n="guideCABlurb">Federal benefits and links to your province or territory.</p>
-          <ul>
-            <li>Benefits Finder · <a href="https://www.canada.ca/en/services/benefits/finder.html" aria-label="Benefits Finder in English">English</a> · <a lang="fr" href="https://www.canada.ca/fr/services/prestations/chercheur.html" aria-label="Chercheur de prestations en français">Français</a></li>
-            <li><a href="https://www.canada.ca/en/revenue-agency/services/child-family-benefits/canada-child-benefit-overview.html">Canada Child Benefit (CRA)</a></li>
-            <li><a href="https://www.canada.ca/en/services/benefits/publicpensions.html">Public pensions (OAS / GIS)</a></li>
-          </ul>
-        </section>
-        <section aria-labelledby="guide-mx" lang="es">
-          <h2 id="guide-mx" data-i18n="guideMX">México</h2>
-          <p data-i18n="guideMXBlurb">Consulta los requisitos, documentos y fechas de registro de los programas federales.</p>
-          <ul>
-            <li><a href="https://www.programasparaelbienestar.gob.mx/">Programas para el Bienestar</a></li>
-            <li><a href="https://www.programasparaelbienestar.gob.mx/programas/adultos-mayores/pension-para-personas-adultas-mayores/">Pensión para personas adultas mayores</a></li>
-          </ul>
-        </section>
-        <section aria-labelledby="guide-us">
-          <h2 id="guide-us">United States</h2>
-          <ul>
-            <li><a href="https://www.usa.gov/benefits">USA.gov benefits</a></li>
-          </ul>
-        </section>
-      </details>
     </section>
 
     <!-- Sign in (optional) -->
     <section id="view-signin" class="view" hidden aria-labelledby="signin-title">
-      <h1 id="signin-title">Sign in to save your checklist</h1>
-      <p class="lead">No password needed. You'll go to our secure login partner, MojoAuth, enter your email, and type in the code they send you. Then you'll come right back here.</p>
-      <ul class="trust">
-        <li><strong>What's shared:</strong> only your email, with MojoAuth, to send the code.</li>
-        <li><strong>What stays here:</strong> your household answers are saved in this browser only, never on a server.</li>
-      </ul>
-      <div class="signin-actions">
-        <button type="button" class="btn btn-primary btn-lg" id="signin-go">Continue to sign in</button>
-        <button type="button" class="btn btn-ghost" id="signin-cancel">Continue without an account</button>
+      <div class="auth-sheet">
+        <div class="auth-intro">
+          <span class="auth-lock" aria-hidden="true"></span>
+          <h1 id="signin-title" tabindex="-1" data-i18n="authHeading">Sign in to save your checklist</h1>
+          <p class="auth-lead" data-i18n="authLead">Keep your checklist in this browser and sign in here to pick up where you left off.</p>
+        </div>
+        <dl class="auth-details">
+          <div>
+            <dt data-i18n="authEmailHeading">Sign in with your email</dt>
+            <dd data-i18n="authEmailDetail">Our sign-in partner, MojoAuth, will email you a code. Enter it on their site to return to Claimable.</dd>
+          </div>
+          <div>
+            <dt data-i18n="authPrivacyHeading">Your answers stay here</dt>
+            <dd data-i18n="authPrivacyDetail">MojoAuth receives your email address. Your household answers stay in this browser on this device.</dd>
+          </div>
+        </dl>
+        <div class="auth-actions">
+          <button type="button" class="btn btn-primary" id="signin-go" data-i18n="authContinue">Continue to sign in</button>
+          <button type="button" class="btn btn-ghost" id="signin-cancel" data-i18n="authSkip">Continue without an account</button>
+        </div>
+        <p class="auth-error" id="signin-error" role="alert" hidden></p>
       </div>
-      <p class="error" id="signin-error" role="alert" hidden></p>
     </section>
 
     <!-- Wizard -->
     <section id="view-form" class="view" hidden aria-labelledby="form-title">
-      <h1 id="form-title" class="sr-only" data-i18n="formTitle">Tell us about your household</h1>
-      <ol class="steps" aria-label="Progress">
-        <li data-step="0" data-i18n="stepHousehold">Household</li>
-        <li data-step="1" data-i18n="stepIncome">Income</li>
-        <li data-step="2" data-i18n="stepSituation">Situation</li>
-      </ol>
+      <aside class="intake-rail">
+        <h1 id="form-title" data-i18n="intakeTitle">Your benefits check</h1>
+        <ol class="steps" data-i18n-aria="intakeProgress" aria-label="Questionnaire progress">
+          <li data-step="0"><span class="step-marker" aria-hidden="true">1</span><span data-i18n="stepHousehold">Household</span></li>
+          <li data-step="1"><span class="step-marker" aria-hidden="true">2</span><span data-i18n="stepIncome">Income</span></li>
+          <li data-step="2"><span class="step-marker" aria-hidden="true">3</span><span data-i18n="stepSituation">Situation</span></li>
+        </ol>
+      </aside>
       <form id="form" novalidate>
+        <p class="step-meta" id="step-count"></p>
         <!-- Step 1 -->
         <fieldset class="step" data-step="0">
-          <legend data-i18n-keep>Who lives with you?</legend>
-          <p class="hint">Count people you live with and share food or money with.</p>
+          <legend tabindex="-1" data-i18n="intakeHousehold">Who lives with you?</legend>
+          <p class="hint" data-i18n="intakeHouseholdHint">Count the people you live with and share food or money with.</p>
 
           <div data-country-fields="US">
             <label for="state" data-i18n="labelState">Which state do you live in?</label>
@@ -188,13 +235,13 @@
           <div class="kids">
             <p class="label-like" id="kids-label">Children under 18 (or 18 and still in high school)</p>
             <div id="kids" aria-labelledby="kids-label"></div>
-            <button type="button" class="btn btn-ghost" id="add-kid">+ Add a child</button>
+            <button type="button" class="btn btn-ghost" id="add-kid" data-i18n="intakeAddChild">Add a child</button>
           </div>
         </fieldset>
 
         <!-- Step 2 -->
         <fieldset class="step" data-step="1" hidden>
-          <legend>Money coming in and going out</legend>
+          <legend tabindex="-1" data-i18n="intakeIncome">Your household finances</legend>
 
           <div data-country-fields="US">
             <p class="hint">Use your best guess for a typical month, before taxes. Add up everyone in the household.</p>
@@ -244,7 +291,7 @@
 
         <!-- Step 3 -->
         <fieldset class="step" data-step="2" hidden>
-          <legend>Your situation</legend>
+          <legend tabindex="-1" data-i18n="intakeSituation">Your situation</legend>
 
           <div data-country-fields="US">
             <p class="label-like">Do you already get any of these? <span class="hint small">(We'll skip them, and some make you eligible for others.)</span></p>
@@ -319,69 +366,76 @@
         <p class="error" id="form-error" role="alert" hidden></p>
 
         <div class="nav">
-          <button type="button" class="btn btn-ghost" id="back" data-i18n="back">Back</button>
-          <button type="submit" class="btn btn-primary" id="next" data-i18n="next">Next</button>
+          <button type="button" class="btn btn-ghost" id="back">Back</button>
+          <button type="submit" class="btn btn-primary" id="next">Next</button>
         </div>
+        <p class="privacy-note" data-i18n="intakePrivacy">Your answers stay in this browser.</p>
       </form>
-      <p class="privacy-note" data-i18n="privacyNote">🔒 Your answers stay in this browser. They're only kept if you sign in and choose "Save my checklist."</p>
     </section>
 
     <!-- Results -->
     <section id="view-results" class="view" hidden aria-labelledby="results-title" tabindex="-1">
-      <div class="hero">
-        <p class="eyebrow" id="results-household"></p>
-        <h1 id="results-title"></h1>
-        <p class="lead" id="results-sub"></p>
+      <div class="results-heading">
+        <div>
+          <h1 id="results-title" data-i18n="checklistTitle">Your benefits checklist</h1>
+          <p id="results-household"></p>
+        </div>
+        <div class="estimate">
+          <p id="estimate-label"></p>
+          <p id="estimate-value"></p>
+          <p id="results-sub"></p>
+        </div>
       </div>
 
       <div class="actions no-print">
-        <button type="button" class="btn btn-primary" id="save" hidden>Save my checklist</button>
-        <button type="button" class="btn btn-primary" id="print" data-i18n="print">Print my checklist</button>
-        <button type="button" class="btn btn-ghost" id="read" data-i18n="read">🔊 Read results aloud</button>
+        <button type="button" class="btn btn-primary" id="save" data-i18n="checklistSave" hidden>Save my checklist</button>
+        <button type="button" class="btn btn-ghost" id="print" data-i18n="print">Print my checklist</button>
+        <button type="button" class="btn btn-ghost" id="read" data-i18n="checklistRead">Read results aloud</button>
         <button type="button" class="btn btn-ghost" id="edit" data-i18n="edit">Change answers</button>
       </div>
       <p class="save-status" id="save-status" role="status" hidden></p>
 
-      <div class="filters no-print" role="tablist" aria-label="Filter results">
-        <button type="button" role="tab" class="chip" data-filter="all" aria-selected="true" data-i18n="filterAll">All matches</button>
-        <button type="button" role="tab" class="chip" data-filter="Food" aria-selected="false" data-i18n="filterFood">Food</button>
-        <button type="button" role="tab" class="chip" data-filter="Taxes" aria-selected="false" data-i18n="filterTaxes">Taxes</button>
-        <button type="button" role="tab" class="chip" data-filter="Health" aria-selected="false" data-i18n="filterHealth">Health</button>
-        <button type="button" role="tab" class="chip" data-filter="Utilities" aria-selected="false" data-i18n="filterUtilities">Utilities</button>
-        <button type="button" role="tab" class="chip" data-filter="Children" aria-selected="false" data-i18n="filterChildren">Children</button>
-        <button type="button" role="tab" class="chip" data-filter="Seniors" aria-selected="false" data-i18n="filterSeniors">Seniors</button>
-        <button type="button" role="tab" class="chip" data-filter="other" aria-selected="false" data-i18n="filterMore">More</button>
+      <div class="filters no-print" role="group" data-i18n-aria="checklistFilters" aria-label="Filter programs by category">
+        <button type="button" class="chip" data-filter="all" aria-pressed="true" data-i18n="filterAll">All matches</button>
+        <button type="button" class="chip" data-filter="Food" aria-pressed="false" data-i18n="filterFood">Food</button>
+        <button type="button" class="chip" data-filter="Taxes" aria-pressed="false" data-i18n="filterTaxes">Taxes</button>
+        <button type="button" class="chip" data-filter="Health" aria-pressed="false" data-i18n="filterHealth">Health</button>
+        <button type="button" class="chip" data-filter="Utilities" aria-pressed="false" data-i18n="filterUtilities">Utilities</button>
+        <button type="button" class="chip" data-filter="Children" aria-pressed="false" data-i18n="filterChildren">Children</button>
+        <button type="button" class="chip" data-filter="Seniors" aria-pressed="false" data-i18n="filterSeniors">Seniors</button>
+        <button type="button" class="chip" data-filter="other" aria-pressed="false" data-i18n="filterMore">More</button>
       </div>
 
-      <p class="track-intro no-print">📅 <span data-i18n="trackIntro">Set your application date and select a numbered step to mark it complete.</span></p>
+      <p class="track-intro no-print" data-i18n="trackIntro">Set your application date and select a numbered step to mark it complete.</p>
 
-      <h2 class="group-title" data-i18n="likelyTitle">Likely eligible</h2>
+      <h2 class="group-title"><span data-i18n="likelyTitle">Likely eligible</span><span class="group-count" id="count-likely"></span></h2>
       <div id="list-likely" class="cards"></div>
 
-      <h2 class="group-title" data-i18n="maybeTitle">Worth checking</h2>
+      <h2 class="group-title"><span data-i18n="maybeTitle">Worth checking</span><span class="group-count" id="count-maybe"></span></h2>
       <p class="hint" data-i18n="maybeHint">These depend on details we couldn't fully check, or on local rules.</p>
       <div id="list-maybe" class="cards"></div>
 
       <details class="more no-print">
-        <summary><span data-i18n-enrolled>You already get</span> (<span id="count-enrolled">0</span>)</summary>
+        <summary><span data-i18n="checklistEnrolled">Already receiving</span> <span class="group-count" id="count-enrolled">0</span></summary>
         <div id="list-enrolled" class="cards compact"></div>
       </details>
       <details class="more no-print">
-        <summary><span data-i18n-unlikely>Probably not eligible, and why</span> (<span id="count-unlikely">0</span>)</summary>
+        <summary><span data-i18n="checklistUnlikely">Probably not eligible</span> <span class="group-count" id="count-unlikely">0</span></summary>
         <div id="list-unlikely" class="cards compact"></div>
       </details>
 
       <aside class="disclaimer">
         <h2 data-i18n="howTitle">How this works</h2>
         <p id="disclaimer-body"></p>
-        <p class="small"><span data-i18n="rulesUpdated">Rules last updated:</span> <span id="as-of"></span>. Every program card links to its official source.</p>
-        <p class="small" id="delete-saved-wrap" hidden><button type="button" class="linklike" id="delete-saved">Delete my saved checklist from this device</button></p>
+        <p class="small"><span data-i18n="rulesUpdated">Rules last updated:</span> <span id="as-of"></span>. <span data-i18n="checklistSourceNote">Each program links to its official source.</span></p>
+        <p class="small" id="delete-saved-wrap" hidden><button type="button" class="linklike" id="delete-saved" data-i18n="checklistDelete">Delete my saved checklist from this device</button></p>
       </aside>
     </section>
   </main>
 
   <footer class="footer wrap">
-    <p><span data-i18n="footer">Built for EvoHacks II · Not affiliated with any government agency</span> · <a href="https://www.usa.gov/benefits" rel="noopener">USA.gov</a> · <a href="https://www.canada.ca/en/services/benefits/finder.html" rel="noopener">Canada Benefits Finder</a> · <a href="https://www.programasparaelbienestar.gob.mx/" rel="noopener">Bienestar</a></p>
+    <p data-i18n="footer">Built for EvoHacks II · Not affiliated with any government agency</p>
+    <nav class="footer-links" aria-label="Official agency links" data-i18n-aria="guidesSummary"><a href="https://www.usa.gov/benefits" rel="noopener">USA.gov</a><a href="https://www.canada.ca/en/services/benefits/finder.html" rel="noopener">Canada Benefits Finder</a><a href="https://www.programasparaelbienestar.gob.mx/" rel="noopener">Bienestar</a></nav>
   </footer>
 
   <script src="js/config.js"></script>

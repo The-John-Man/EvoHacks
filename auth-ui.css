@@ -1,0 +1,129 @@
+/* Account views share a compact layout around the checklist and its privacy details. */
+#view-signin {
+  max-width: 55rem;
+  margin-inline: auto;
+  padding-block: clamp(2.5rem, 7vw, 6rem);
+}
+
+.auth-sheet {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 2.25rem clamp(2rem, 5vw, 4rem);
+  padding: clamp(1.5rem, 4vw, 3.5rem);
+  border: 1px solid var(--line);
+  border-radius: 1.35rem;
+  background: var(--surface);
+}
+
+.auth-lock {
+  position: relative;
+  display: block;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-bottom: 1.4rem;
+  border-radius: .8rem;
+  background: var(--brand);
+  color: var(--brand-ink);
+}
+
+.auth-lock::before, .auth-lock::after {
+  position: absolute;
+  content: "";
+  box-sizing: border-box;
+  border: 2px solid currentColor;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.auth-lock::before {
+  width: .78rem;
+  height: .63rem;
+  top: .63rem;
+  border-bottom: 0;
+  border-radius: .45rem .45rem 0 0;
+}
+
+.auth-lock::after {
+  width: 1.1rem;
+  height: .88rem;
+  top: 1.18rem;
+  border-radius: .18rem;
+}
+
+.auth-sheet h1 {
+  margin: 0;
+  font-size: clamp(2.1rem, 4vw, 3.5rem);
+  line-height: 1.04;
+  letter-spacing: -.045em;
+  text-wrap: balance;
+}
+
+.auth-lead, .auth-details dd {
+  margin: .85rem 0 0;
+  color: var(--ink-soft);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.auth-details {
+  align-self: center;
+  margin: 0;
+  padding-left: clamp(1.5rem, 3vw, 2.5rem);
+  border-left: 1px solid var(--line);
+}
+
+.auth-details div + div { margin-top: 1.35rem; }
+.auth-details dt { font-weight: 650; color: var(--ink); }
+.auth-details dd { margin-top: .3rem; font-size: .9375rem; }
+
+.auth-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: .75rem;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--line);
+  padding-top: 1.5rem;
+}
+
+.auth-actions .btn { white-space: normal; }
+.auth-actions .btn:disabled { cursor: progress; }
+.auth-error, #save-status {
+  padding: .75rem 1rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-inline-start: 3px solid var(--brand);
+  border-radius: .45rem;
+  overflow-wrap: anywhere;
+}
+
+.auth-error {
+  grid-column: 1 / -1;
+  margin: -.75rem 0 0;
+  border-inline-start-color: #ed967f;
+}
+
+.auth-callback { min-height: 100vh; }
+.auth-callback .topbar-inner { justify-content: flex-start; }
+.auth-callback-main {
+  max-width: 36rem;
+  margin-inline: auto;
+  padding: clamp(2.5rem, 10vh, 7rem) 1rem;
+}
+.auth-return { display: block; }
+.auth-return .btn { margin-top: 1.5rem; }
+
+@media (max-width: 42rem) {
+  #view-signin { padding-block: 1.5rem 2rem; }
+  .auth-sheet { grid-template-columns: minmax(0, 1fr); gap: 1.45rem; }
+  .auth-details { border-left: 0; padding-left: 0; }
+}
+
+@media (max-width: 30rem) {
+  .auth-actions { flex-direction: column; }
+  .auth-actions .btn { width: 100%; }
+}
+
+@media print {
+  #save-status { display: none; }
+}
