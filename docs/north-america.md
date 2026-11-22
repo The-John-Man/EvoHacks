@@ -1,5 +1,7 @@
 # North American benefits coverage
 
+The next phase provides full screening flows for Canada and Mexico. Start with the [Cursor handoff](cursor-handoff.md), [screening specification](north-america-screening.md) and [country program backlog](country-programs.md). The directory described below is the initial implementation.
+
 The U.S. screener already asks about state, monthly USD income, insurance and federal enrollment. A parent looking for Canadian child benefits should reach the CRA before answering any of those questions. The homepage now identifies the U.S. route and offers an expandable directory for Canada and Mexico. The directory works with a keyboard and with JavaScript disabled. Its links carry no form values.
 
 ## First two screening pilots

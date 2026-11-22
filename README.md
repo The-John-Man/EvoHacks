@@ -82,3 +82,5 @@ and can explain all of it. See the demo video.
 ## North American coverage
 
 The homepage includes official benefit guides for Canada and Mexico. Personalized screening currently covers U.S. programs. See the [implementation plan](docs/north-america.md) for the first two screening pilots, regional research sources and EvoHacks prize opportunities.
+
+To continue full Canadian and Mexican screening in Cursor, start with the [implementation handoff](docs/cursor-handoff.md).
