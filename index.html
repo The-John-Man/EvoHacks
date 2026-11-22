@@ -4,23 +4,30 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Claimable: Find Benefits You're Missing</title>
-  <meta name="description" content="Answer a few questions and see which government programs and services your household may qualify for. Nothing you type leaves your device.">
+  <meta name="description" content="Answer a few questions and see which government programs and services your household may qualify for in the U.S., Canada, or Mexico. Your screening answers stay on this device.">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <a class="skip" href="#main">Skip to content</a>
+  <a class="skip" href="#main" data-i18n="skip">Skip to content</a>
   <header class="topbar">
     <div class="wrap topbar-inner">
-      <a class="brand" href="#" id="brand-home" aria-label="Claimable home">
+      <a class="brand" href="#" id="brand-home" aria-label="Claimable home" data-i18n-aria="brandHome">
         <span class="brand-mark" aria-hidden="true">$</span> Claimable
       </a>
       <div class="tools">
+        <label class="tool-lang" for="lang-select"><span class="sr-only" data-i18n="langLabel">Language</span>
+          <select id="lang-select" aria-label="Language">
+            <option value="en">English</option>
+            <option value="fr">Français</option>
+            <option value="es">Español</option>
+          </select>
+        </label>
         <span class="account" id="account" hidden>
           <span class="account-email" id="account-email"></span>
           <button type="button" class="tool tool-text" id="sign-out">Sign out</button>
         </span>
         <button type="button" class="tool tool-text" id="sign-in" hidden>Sign in</button>
-        <button type="button" class="tool" id="text-size" aria-pressed="false" title="Larger text">A+</button>
+        <button type="button" class="tool" id="text-size" aria-pressed="false" title="Larger text" data-i18n-title="textSize">A+</button>
       </div>
     </div>
   </header>
@@ -28,23 +35,61 @@
   <main id="main" class="wrap">
     <!-- Landing -->
     <section id="view-intro" class="view" aria-labelledby="intro-title">
-      <p class="eyebrow">Free · Private · 3 minutes</p>
-      <h1 id="intro-title">Are you leaving money on the table?</h1>
-      <p class="lead">Billions of dollars in food, tax credits, health coverage, and utility help go unclaimed every year, often by families who qualify. Answer a few questions and we'll check <strong>20 programs</strong> for you.</p>
+      <p class="eyebrow" data-i18n="eyebrow">Free · Private · 3 minutes</p>
+      <h1 id="intro-title" data-i18n="introTitle">Are you leaving money on the table?</h1>
+      <p class="lead" id="intro-lead">Billions of dollars in food, tax credits, health coverage, and utility help go unclaimed every year. Answer a few questions and we'll check <strong>20 U.S. federal programs</strong> for you.</p>
       <ul class="trust">
-        <li><strong>Private.</strong> Your answers never leave this device. No account needed, no tracking.</li>
-        <li><strong>Clear.</strong> We show exactly why you may qualify, using official 2026 rules.</li>
-        <li><strong>Useful.</strong> You get a checklist of what to bring and where to apply.</li>
+        <li data-i18n="trustPrivate"><strong>Private.</strong> Your screening answers stay on this device. You can check benefits without signing in.</li>
+        <li data-i18n="trustClear"><strong>Clear.</strong> We show exactly why you may qualify, using published official rules.</li>
+        <li data-i18n="trustUseful"><strong>Useful.</strong> You get a checklist of what to bring and where to apply.</li>
       </ul>
+
+      <div class="chooser" role="group" aria-labelledby="country-label">
+        <p class="label-like" id="country-label" data-i18n="countryLabel">Where do you live?</p>
+        <div class="chooser-row" id="country-choices">
+          <label class="choice"><input type="radio" name="country" value="US" checked> <span data-i18n="countryUS">United States</span></label>
+          <label class="choice"><input type="radio" name="country" value="CA"> <span data-i18n="countryCA">Canada</span></label>
+          <label class="choice"><input type="radio" name="country" value="MX"> <span data-i18n="countryMX">Mexico</span></label>
+        </div>
+        <p class="hint small" id="coverage-note"></p>
+      </div>
+
       <div class="welcome-back" id="welcome-back" hidden>
         <p><strong>Welcome back.</strong> You saved a checklist on <span id="saved-date"></span>.</p>
         <button type="button" class="btn btn-primary" id="open-saved">Open my saved checklist</button>
       </div>
-      <button type="button" class="btn btn-primary btn-lg" id="start">Check my benefits</button>
+      <button type="button" class="btn btn-primary btn-lg" id="start" data-i18n="start">Check my benefits</button>
       <details class="demo">
-        <summary>Try an example household</summary>
+        <summary data-i18n="demoSummary">Try an example household</summary>
         <div class="demo-list" id="demo-list"></div>
-        <p><a href="apply/index.html">Practice filling a Texas SNAP application</a></p>
+        <p data-country-fields="US"><a href="apply/index.html" hreflang="en" data-i18n="practiceTexas">Practice filling a Texas SNAP application (English sample)</a></p>
+      </details>
+      <details class="country-guides">
+        <summary data-i18n="guidesSummary">Official agency links</summary>
+        <p data-i18n="guidesIntro">Useful if you prefer the agency site, or if JavaScript is off.</p>
+        <section aria-labelledby="guide-ca">
+          <h2 id="guide-ca" data-i18n="guideCA">Canada</h2>
+          <p data-i18n="guideCABlurb">Federal benefits and links to your province or territory.</p>
+          <ul>
+            <li>Benefits Finder · <a href="https://www.canada.ca/en/services/benefits/finder.html" aria-label="Benefits Finder in English">English</a> · <a lang="fr" href="https://www.canada.ca/fr/services/prestations/chercheur.html" aria-label="Chercheur de prestations en français">Français</a></li>
+            <li><a href="https://www.canada.ca/en/revenue-agency/services/child-family-benefits/canada-child-benefit-overview.html">Canada Child Benefit (CRA)</a></li>
+            <li><a href="https://www.canada.ca/en/services/benefits/publicpensions.html">Public pensions (OAS / GIS)</a></li>
+          </ul>
+        </section>
+        <section aria-labelledby="guide-mx" lang="es">
+          <h2 id="guide-mx" data-i18n="guideMX">México</h2>
+          <p data-i18n="guideMXBlurb">Consulta los requisitos, documentos y fechas de registro de los programas federales.</p>
+          <ul>
+            <li><a href="https://www.programasparaelbienestar.gob.mx/">Programas para el Bienestar</a></li>
+            <li><a href="https://www.programasparaelbienestar.gob.mx/programas/adultos-mayores/pension-para-personas-adultas-mayores/">Pensión para personas adultas mayores</a></li>
+          </ul>
+        </section>
+        <section aria-labelledby="guide-us">
+          <h2 id="guide-us">United States</h2>
+          <ul>
+            <li><a href="https://www.usa.gov/benefits">USA.gov benefits</a></li>
+          </ul>
+        </section>
       </details>
     </section>
 
@@ -65,20 +110,30 @@
 
     <!-- Wizard -->
     <section id="view-form" class="view" hidden aria-labelledby="form-title">
-      <h1 id="form-title" class="sr-only">Tell us about your household</h1>
+      <h1 id="form-title" class="sr-only" data-i18n="formTitle">Tell us about your household</h1>
       <ol class="steps" aria-label="Progress">
-        <li data-step="0">Household</li>
-        <li data-step="1">Income</li>
-        <li data-step="2">Situation</li>
+        <li data-step="0" data-i18n="stepHousehold">Household</li>
+        <li data-step="1" data-i18n="stepIncome">Income</li>
+        <li data-step="2" data-i18n="stepSituation">Situation</li>
       </ol>
       <form id="form" novalidate>
         <!-- Step 1 -->
         <fieldset class="step" data-step="0">
-          <legend>Who lives with you?</legend>
+          <legend data-i18n-keep>Who lives with you?</legend>
           <p class="hint">Count people you live with and share food or money with.</p>
 
-          <label for="state">Which state do you live in?</label>
-          <select id="state" name="state" required></select>
+          <div data-country-fields="US">
+            <label for="state" data-i18n="labelState">Which state do you live in?</label>
+            <select id="state" name="state"></select>
+          </div>
+          <div data-country-fields="CA" hidden>
+            <label for="province" data-i18n="labelProvince">Which province or territory?</label>
+            <select id="province" name="province"></select>
+          </div>
+          <div data-country-fields="MX" hidden>
+            <label for="entity" data-i18n="labelEntity">¿En qué entidad federativa vives?</label>
+            <select id="entity" name="entity"></select>
+          </div>
 
           <div class="row">
             <div>
@@ -91,11 +146,44 @@
             </div>
           </div>
 
+          <div class="row" data-country-fields="CA MX">
+            <div>
+              <label for="applicantAge">Your age (applicant)</label>
+              <input id="applicantAge" name="applicantAge" type="number" inputmode="numeric" min="0" max="120" value="" placeholder="e.g. 42">
+            </div>
+          </div>
+
           <div class="checks">
-            <label class="check"><input type="checkbox" name="married"> I'm married and we file taxes together</label>
-            <label class="check"><input type="checkbox" name="adultWorkingAge" checked> At least one adult is age 25–64</label>
-            <label class="check"><input type="checkbox" name="disabled"> Someone has a disability</label>
-            <label class="check"><input type="checkbox" name="pregnant"> Someone is pregnant</label>
+            <label class="check" data-country-fields="US CA"><input type="checkbox" name="married"> I'm married / common-law and we file together</label>
+            <label class="check" data-country-fields="US"><input type="checkbox" name="adultWorkingAge" checked> At least one adult is age 25–64</label>
+            <label class="check" data-country-fields="US"><input type="checkbox" name="disabled"> Someone has a disability</label>
+            <label class="check" data-country-fields="US"><input type="checkbox" name="pregnant"> Someone is pregnant</label>
+            <label class="check" data-country-fields="CA"><input type="checkbox" name="primaryCaregiver" checked> I am the primary caregiver for the children at home</label>
+            <label class="check" data-country-fields="CA"><input type="checkbox" name="taxResident" checked> I am a resident of Canada for tax purposes</label>
+            <label class="check" data-country-fields="CA"><input type="checkbox" name="sharedCustody"> Shared custody (child lives with me about 40–60% of the time)</label>
+            <label class="check" data-country-fields="CA"><input type="checkbox" name="legalStatusOk" checked> I have Canadian citizenship or legal resident status</label>
+            <label class="check" data-country-fields="MX"><input type="checkbox" name="mexicanNational" checked> Mexican nationality (by birth or naturalization)</label>
+            <label class="check" data-country-fields="MX"><input type="checkbox" name="residesInMexico" checked> I live in Mexico</label>
+            <label class="check" data-country-fields="MX"><input type="checkbox" name="disabilityCertified"> Permanent disability certification</label>
+          </div>
+
+          <div data-country-fields="CA">
+            <label for="eligibleStatus">Immigration / status for CCB</label>
+            <select id="eligibleStatus" name="eligibleStatus">
+              <option value="citizen">Canadian citizen / permanent resident / protected person / Indian Act</option>
+              <option value="temp18">Temporary resident (18+ months in Canada)</option>
+              <option value="unknown">I'm not sure</option>
+              <option value="ineligible">None of these</option>
+            </select>
+          </div>
+
+          <div data-country-fields="MX">
+            <label for="gender">Gender (for Mujeres Bienestar)</label>
+            <select id="gender" name="gender">
+              <option value="unspecified">Prefer not to say</option>
+              <option value="female">Woman</option>
+              <option value="male">Man</option>
+            </select>
           </div>
 
           <div class="kids">
@@ -108,82 +196,135 @@
         <!-- Step 2 -->
         <fieldset class="step" data-step="1" hidden>
           <legend>Money coming in and going out</legend>
-          <p class="hint">Use your best guess for a typical month, before taxes. Add up everyone in the household.</p>
 
-          <label for="earnedMonthly">Monthly pay from work (jobs, gig work, self-employment)</label>
-          <div class="money"><span aria-hidden="true">$</span><input id="earnedMonthly" name="earnedMonthly" type="number" inputmode="decimal" min="0" step="1" value="" placeholder="0"></div>
-
-          <label for="otherMonthly">Other monthly income</label>
-          <p class="hint small" id="other-hint">Social Security, unemployment, pensions, child support received</p>
-          <div class="money"><span aria-hidden="true">$</span><input id="otherMonthly" name="otherMonthly" type="number" inputmode="decimal" min="0" step="1" value="" placeholder="0" aria-describedby="other-hint"></div>
-
-          <div class="row">
-            <div>
-              <label for="rentMonthly">Rent or mortgage per month</label>
-              <div class="money"><span aria-hidden="true">$</span><input id="rentMonthly" name="rentMonthly" type="number" inputmode="decimal" min="0" value="" placeholder="0"></div>
+          <div data-country-fields="US">
+            <p class="hint">Use your best guess for a typical month, before taxes. Add up everyone in the household.</p>
+            <label for="earnedMonthly">Monthly pay from work (jobs, gig work, self-employment)</label>
+            <div class="money"><span aria-hidden="true">$</span><input id="earnedMonthly" name="earnedMonthly" type="number" inputmode="decimal" min="0" step="1" value="" placeholder="0"></div>
+            <label for="otherMonthly">Other monthly income</label>
+            <p class="hint small" id="other-hint">Social Security, unemployment, pensions, child support received</p>
+            <div class="money"><span aria-hidden="true">$</span><input id="otherMonthly" name="otherMonthly" type="number" inputmode="decimal" min="0" step="1" value="" placeholder="0" aria-describedby="other-hint"></div>
+            <div class="row">
+              <div>
+                <label for="rentMonthly">Rent or mortgage per month</label>
+                <div class="money"><span aria-hidden="true">$</span><input id="rentMonthly" name="rentMonthly" type="number" inputmode="decimal" min="0" value="" placeholder="0"></div>
+              </div>
+              <div>
+                <label for="utilitiesMonthly">Utility bills per month</label>
+                <div class="money"><span aria-hidden="true">$</span><input id="utilitiesMonthly" name="utilitiesMonthly" type="number" inputmode="decimal" min="0" value="" placeholder="0"></div>
+              </div>
             </div>
-            <div>
-              <label for="utilitiesMonthly">Utility bills per month</label>
-              <div class="money"><span aria-hidden="true">$</span><input id="utilitiesMonthly" name="utilitiesMonthly" type="number" inputmode="decimal" min="0" value="" placeholder="0"></div>
-            </div>
+            <label class="check"><input type="checkbox" name="investmentOver"> We have more than $12,200 a year in investment income (rare)</label>
           </div>
 
-          <label class="check"><input type="checkbox" name="investmentOver"> We have more than $12,200 a year in investment income (rare)</label>
+          <div data-country-fields="CA" hidden>
+            <p class="hint">For CCB and dental screening we use adjusted family net income (AFNI) from the prior tax year. Leave blank if you don't know.</p>
+            <label for="afniAnnual">Adjusted family net income (annual, CAD)</label>
+            <div class="money"><span aria-hidden="true">CA$</span><input id="afniAnnual" name="afniAnnual" type="number" inputmode="decimal" min="0" step="1" value="" placeholder=""></div>
+            <label class="check"><input type="checkbox" name="afniUnknown"> I don't know our AFNI</label>
+            <label for="yearsInCanadaAfter18">Years lived in Canada after age 18 (for OAS)</label>
+            <input id="yearsInCanadaAfter18" name="yearsInCanadaAfter18" type="number" inputmode="numeric" min="0" max="100" value="" placeholder="e.g. 20">
+            <label class="check"><input type="checkbox" name="yearsUnknown"> I'm not sure about residence years</label>
+          </div>
+
+          <div data-country-fields="MX" hidden>
+            <p class="hint">Most Bienestar pensions use age, nationality, and residence — not monthly income. Tell us about school or work if relevant.</p>
+            <label class="check"><input type="checkbox" name="inPublicSchool"> Someone is in public basic education (for Rita Cetina)</label>
+            <label class="check"><input type="checkbox" name="studying"> Someone is studying (upper secondary / university)</label>
+            <label class="check"><input type="checkbox" name="working"> I am currently working</label>
+            <label class="check"><input type="checkbox" name="otherScholarship"> Someone already gets another scholarship</label>
+            <label for="schoolLevel">School level (if studying)</label>
+            <select id="schoolLevel" name="schoolLevel">
+              <option value="none">Not in school / not sure</option>
+              <option value="basic">Basic (primaria / secundaria)</option>
+              <option value="upper-secondary">Upper secondary (media superior)</option>
+              <option value="higher">Higher education</option>
+            </select>
+          </div>
         </fieldset>
 
         <!-- Step 3 -->
         <fieldset class="step" data-step="2" hidden>
           <legend>Your situation</legend>
 
-          <p class="label-like">Do you already get any of these? <span class="hint small">(We'll skip them, and some make you eligible for others.)</span></p>
-          <div class="checks grid2">
-            <label class="check"><input type="checkbox" name="en_snap"> SNAP / food stamps</label>
-            <label class="check"><input type="checkbox" name="en_medicaid"> Medicaid or CHIP</label>
-            <label class="check"><input type="checkbox" name="en_wic"> WIC</label>
-            <label class="check"><input type="checkbox" name="en_ssi"> SSI</label>
-            <label class="check"><input type="checkbox" name="en_tanf"> TANF / cash assistance</label>
-            <label class="check"><input type="checkbox" name="en_liheap"> Energy bill help (LIHEAP)</label>
-            <label class="check"><input type="checkbox" name="en_lifeline"> Lifeline phone discount</label>
-            <label class="check"><input type="checkbox" name="en_schoolMeals"> Free/reduced school meals</label>
-            <label class="check"><input type="checkbox" name="en_housing"> Section 8 / public housing</label>
-            <label class="check"><input type="checkbox" name="en_headStart"> Head Start</label>
-            <label class="check"><input type="checkbox" name="en_childcare"> Child care assistance</label>
+          <div data-country-fields="US">
+            <p class="label-like">Do you already get any of these? <span class="hint small">(We'll skip them, and some make you eligible for others.)</span></p>
+            <div class="checks grid2">
+              <label class="check"><input type="checkbox" name="en_snap"> SNAP / food stamps</label>
+              <label class="check"><input type="checkbox" name="en_medicaid"> Medicaid or CHIP</label>
+              <label class="check"><input type="checkbox" name="en_wic"> WIC</label>
+              <label class="check"><input type="checkbox" name="en_ssi"> SSI</label>
+              <label class="check"><input type="checkbox" name="en_tanf"> TANF / cash assistance</label>
+              <label class="check"><input type="checkbox" name="en_liheap"> Energy bill help (LIHEAP)</label>
+              <label class="check"><input type="checkbox" name="en_lifeline"> Lifeline phone discount</label>
+              <label class="check"><input type="checkbox" name="en_schoolMeals"> Free/reduced school meals</label>
+              <label class="check"><input type="checkbox" name="en_housing"> Section 8 / public housing</label>
+              <label class="check"><input type="checkbox" name="en_headStart"> Head Start</label>
+              <label class="check"><input type="checkbox" name="en_childcare"> Child care assistance</label>
+            </div>
+            <label for="housing">Where do you live?</label>
+            <select id="housing" name="housing">
+              <option value="rent">I rent</option>
+              <option value="own">I own my home</option>
+              <option value="homeless">I don't have stable housing right now</option>
+              <option value="other">Other (staying with family, etc.)</option>
+            </select>
+            <label for="insurance">Health insurance for the adults</label>
+            <select id="insurance" name="insurance">
+              <option value="none">No insurance</option>
+              <option value="employer">Through a job</option>
+              <option value="medicaid">Medicaid</option>
+              <option value="marketplace">HealthCare.gov plan</option>
+              <option value="other">Medicare or other</option>
+            </select>
+            <div class="checks">
+              <label class="check"><input type="checkbox" name="paysEnergy" checked> We pay for heating or cooling</label>
+              <label class="check"><input type="checkbox" name="behindUtilities"> We're behind on utility bills or got a shutoff notice</label>
+              <label class="check"><input type="checkbox" name="medicalBills"> We have hospital or medical bills</label>
+              <label class="check"><input type="checkbox" name="needsChildcare"> I need child care to work or go to school</label>
+              <label class="check"><input type="checkbox" name="student"> Someone is in (or starting) college</label>
+            </div>
           </div>
 
-          <label for="housing">Where do you live?</label>
-          <select id="housing" name="housing">
-            <option value="rent">I rent</option>
-            <option value="own">I own my home</option>
-            <option value="homeless">I don't have stable housing right now</option>
-            <option value="other">Other (staying with family, etc.)</option>
-          </select>
+          <div data-country-fields="CA" hidden>
+            <p class="label-like">Do you already get any of these?</p>
+            <div class="checks grid2">
+              <label class="check"><input type="checkbox" name="en_ccb"> Canada Child Benefit</label>
+              <label class="check"><input type="checkbox" name="en_oas"> Old Age Security</label>
+              <label class="check"><input type="checkbox" name="en_gis"> Guaranteed Income Supplement</label>
+              <label class="check"><input type="checkbox" name="en_cdb"> Canada Disability Benefit</label>
+              <label class="check"><input type="checkbox" name="en_cdcp"> Canadian Dental Care Plan</label>
+            </div>
+            <label for="dtc">Disability Tax Credit</label>
+            <select id="dtc" name="dtc">
+              <option value="no">Not approved / not applicable</option>
+              <option value="yes">Approved</option>
+              <option value="pending">Application pending</option>
+            </select>
+            <label class="check"><input type="checkbox" name="hasDentalCoverage"> We already have dental insurance</label>
+          </div>
 
-          <label for="insurance">Health insurance for the adults</label>
-          <select id="insurance" name="insurance">
-            <option value="none">No insurance</option>
-            <option value="employer">Through a job</option>
-            <option value="medicaid">Medicaid</option>
-            <option value="marketplace">HealthCare.gov plan</option>
-            <option value="other">Medicare or other</option>
-          </select>
-
-          <div class="checks">
-            <label class="check"><input type="checkbox" name="paysEnergy" checked> We pay for heating or cooling</label>
-            <label class="check"><input type="checkbox" name="behindUtilities"> We're behind on utility bills or got a shutoff notice</label>
-            <label class="check"><input type="checkbox" name="medicalBills"> We have hospital or medical bills</label>
-            <label class="check"><input type="checkbox" name="needsChildcare"> I need child care to work or go to school</label>
-            <label class="check"><input type="checkbox" name="student"> Someone is in (or starting) college</label>
+          <div data-country-fields="MX" hidden>
+            <p class="label-like">¿Ya recibes alguno de estos?</p>
+            <div class="checks grid2">
+              <label class="check"><input type="checkbox" name="en_pension65"> Pensión Adultos Mayores</label>
+              <label class="check"><input type="checkbox" name="en_mujeres"> Pensión Mujeres Bienestar</label>
+              <label class="check"><input type="checkbox" name="en_disability"> Pensión por discapacidad</label>
+              <label class="check"><input type="checkbox" name="en_becaRita"> Beca Rita Cetina</label>
+              <label class="check"><input type="checkbox" name="en_becaBenito"> Beca Benito Juárez</label>
+              <label class="check"><input type="checkbox" name="en_jcf"> Jóvenes Construyendo el Futuro</label>
+            </div>
           </div>
         </fieldset>
 
         <p class="error" id="form-error" role="alert" hidden></p>
 
         <div class="nav">
-          <button type="button" class="btn btn-ghost" id="back">Back</button>
-          <button type="submit" class="btn btn-primary" id="next">Next</button>
+          <button type="button" class="btn btn-ghost" id="back" data-i18n="back">Back</button>
+          <button type="submit" class="btn btn-primary" id="next" data-i18n="next">Next</button>
         </div>
       </form>
-      <p class="privacy-note">🔒 Your answers stay in this browser. They're only kept if you sign in and choose "Save my checklist."</p>
+      <p class="privacy-note" data-i18n="privacyNote">🔒 Your answers stay in this browser. They're only kept if you sign in and choose "Save my checklist."</p>
     </section>
 
     <!-- Results -->
@@ -196,53 +337,61 @@
 
       <div class="actions no-print">
         <button type="button" class="btn btn-primary" id="save" hidden>Save my checklist</button>
-        <button type="button" class="btn btn-primary" id="print">Print my checklist</button>
-        <button type="button" class="btn btn-ghost" id="read">🔊 Read results aloud</button>
-        <button type="button" class="btn btn-ghost" id="edit">Change answers</button>
+        <button type="button" class="btn btn-primary" id="print" data-i18n="print">Print my checklist</button>
+        <button type="button" class="btn btn-ghost" id="read" data-i18n="read">🔊 Read results aloud</button>
+        <button type="button" class="btn btn-ghost" id="edit" data-i18n="edit">Change answers</button>
       </div>
       <p class="save-status" id="save-status" role="status" hidden></p>
 
       <div class="filters no-print" role="tablist" aria-label="Filter results">
-        <button type="button" role="tab" class="chip" data-filter="all" aria-selected="true">All matches</button>
-        <button type="button" role="tab" class="chip" data-filter="Food" aria-selected="false">Food</button>
-        <button type="button" role="tab" class="chip" data-filter="Taxes" aria-selected="false">Taxes</button>
-        <button type="button" role="tab" class="chip" data-filter="Health" aria-selected="false">Health</button>
-        <button type="button" role="tab" class="chip" data-filter="Utilities" aria-selected="false">Utilities</button>
-        <button type="button" role="tab" class="chip" data-filter="other" aria-selected="false">More</button>
+        <button type="button" role="tab" class="chip" data-filter="all" aria-selected="true" data-i18n="filterAll">All matches</button>
+        <button type="button" role="tab" class="chip" data-filter="Food" aria-selected="false" data-i18n="filterFood">Food</button>
+        <button type="button" role="tab" class="chip" data-filter="Taxes" aria-selected="false" data-i18n="filterTaxes">Taxes</button>
+        <button type="button" role="tab" class="chip" data-filter="Health" aria-selected="false" data-i18n="filterHealth">Health</button>
+        <button type="button" role="tab" class="chip" data-filter="Utilities" aria-selected="false" data-i18n="filterUtilities">Utilities</button>
+        <button type="button" role="tab" class="chip" data-filter="Children" aria-selected="false" data-i18n="filterChildren">Children</button>
+        <button type="button" role="tab" class="chip" data-filter="Seniors" aria-selected="false" data-i18n="filterSeniors">Seniors</button>
+        <button type="button" role="tab" class="chip" data-filter="other" aria-selected="false" data-i18n="filterMore">More</button>
       </div>
 
-      <h2 class="group-title">Likely eligible</h2>
+      <h2 class="group-title" data-i18n="likelyTitle">Likely eligible</h2>
       <div id="list-likely" class="cards"></div>
 
-      <h2 class="group-title">Worth checking</h2>
-      <p class="hint">These depend on your state's rules or on things we didn't ask.</p>
+      <h2 class="group-title" data-i18n="maybeTitle">Worth checking</h2>
+      <p class="hint" data-i18n="maybeHint">These depend on details we couldn't fully check, or on local rules.</p>
       <div id="list-maybe" class="cards"></div>
 
       <details class="more no-print">
-        <summary>You already get (<span id="count-enrolled">0</span>)</summary>
+        <summary><span data-i18n-enrolled>You already get</span> (<span id="count-enrolled">0</span>)</summary>
         <div id="list-enrolled" class="cards compact"></div>
       </details>
       <details class="more no-print">
-        <summary>Probably not eligible, and why (<span id="count-unlikely">0</span>)</summary>
+        <summary><span data-i18n-unlikely>Probably not eligible, and why</span> (<span id="count-unlikely">0</span>)</summary>
         <div id="list-unlikely" class="cards compact"></div>
       </details>
 
       <aside class="disclaimer">
-        <h2>How this works</h2>
-        <p>Claimable uses published 2026 federal rules (poverty guidelines, SNAP FY2027 tables, IRS 2026 tax credit limits) to <em>estimate</em> what you may qualify for. It isn't an application, and only the agency that runs each program can decide your eligibility. Dollar amounts are estimates. States often have extra programs and different limits, so call <strong>211</strong> for local help.</p>
-        <p class="small">Rules last updated: <span id="as-of"></span>. Every program card links to its official source.</p>
+        <h2 data-i18n="howTitle">How this works</h2>
+        <p id="disclaimer-body"></p>
+        <p class="small"><span data-i18n="rulesUpdated">Rules last updated:</span> <span id="as-of"></span>. Every program card links to its official source.</p>
         <p class="small" id="delete-saved-wrap" hidden><button type="button" class="linklike" id="delete-saved">Delete my saved checklist from this device</button></p>
       </aside>
     </section>
   </main>
 
   <footer class="footer wrap">
-    <p>Built for EvoHacks II · Not affiliated with any government agency · <a href="https://www.usa.gov/benefits" rel="noopener">USA.gov benefits</a></p>
+    <p><span data-i18n="footer">Built for EvoHacks II · Not affiliated with any government agency</span> · <a href="https://www.usa.gov/benefits" rel="noopener">USA.gov</a> · <a href="https://www.canada.ca/en/services/benefits/finder.html" rel="noopener">Canada Benefits Finder</a> · <a href="https://www.programasparaelbienestar.gob.mx/" rel="noopener">Bienestar</a></p>
   </footer>
 
   <script src="js/config.js"></script>
   <script src="js/data.js"></script>
   <script src="js/rules.js"></script>
+  <script src="js/countries/ca-data.js"></script>
+  <script src="js/countries/ca-rules.js"></script>
+  <script src="js/countries/mx-data.js"></script>
+  <script src="js/countries/mx-rules.js"></script>
+  <script src="js/countries.js"></script>
+  <script src="js/i18n.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/app.js"></script>
 </body>

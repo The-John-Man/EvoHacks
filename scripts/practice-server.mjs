@@ -12,7 +12,7 @@ export async function startPracticeServer() {
       let path = new URL(req.url, "http://localhost").pathname;
       if (path === "/apply" || path === "/practice") path += "/";
       if (path.endsWith("/")) path += "index.html";
-      const publicPath = /^\/(?:index\.html|styles\.css|(?:js|practice|apply|auth\/callback)\/[\w-]+\.(?:html|css|js))$/;
+      const publicPath = /^\/(?:index\.html|styles\.css|(?:js|practice|apply|auth\/callback)\/[\w-]+\.(?:html|css|js)|js\/countries\/(?:ca|mx)-(?:data|rules)\.js)$/;
       if (req.method !== "GET" || !publicPath.test(path)) {
         res.writeHead(404).end();
         return;

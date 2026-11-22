@@ -1,11 +1,14 @@
-/* Claimable — UI. Reads the form, calls Claimable.screen(), renders results. */
+/* Claimable — UI. Country + language selection, country intake, dispatcher, results. */
 (function () {
   "use strict";
 
   const D = window.ClaimableData;
+  const CAData = window.ClaimableCAData;
+  const MXData = window.ClaimableMXData;
+  const Countries = window.ClaimableCountries;
+  const I18n = window.ClaimableI18n;
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
-  const money = (n) => "$" + Math.round(n).toLocaleString("en-US");
 
   const views = { intro: $("#view-intro"), signin: $("#view-signin"), form: $("#view-form"), results: $("#view-results") };
   const Auth = window.ClaimableAuth || { enabled: false, user: () => null, onChange() {}, loadSaved: () => null };
@@ -16,48 +19,222 @@
   let step = 0;
   let lastResult = null;
   let filter = "all";
+  let selectedCountry = "US";
+  let pendingCountry = "US";
 
-  // ---------- Example households (for demos) ----------
-  const DEMOS = [
-    {
-      title: "Maria, single mom in Texas",
-      desc: "2 kids (ages 3 and 8), $2,100/month from work, rents, no insurance",
-      data: { state: "TX", adults: 1, seniors: 0, adultWorkingAge: true, children: [3, 8], earnedMonthly: 2100, otherMonthly: 0, rentMonthly: 1100, utilitiesMonthly: 180, housing: "rent", insurance: "none", paysEnergy: true, needsChildcare: true },
-    },
-    {
-      title: "James & Lena, family of five in Ohio",
-      desc: "Married, 3 kids (1, 6, 11), $3,800/month, kids already on Medicaid",
-      data: { state: "OH", adults: 2, seniors: 0, married: true, adultWorkingAge: true, children: [1, 6, 11], earnedMonthly: 3800, otherMonthly: 0, rentMonthly: 1350, utilitiesMonthly: 240, housing: "rent", insurance: "employer", paysEnergy: true, behindUtilities: true, en_medicaid: true },
-    },
-    {
-      title: "Dorothy, 71, living alone in Florida",
-      desc: "$1,150/month Social Security, owns her home, has hospital bills",
-      data: { state: "FL", adults: 1, seniors: 1, adultWorkingAge: false, children: [], earnedMonthly: 0, otherMonthly: 1150, rentMonthly: 0, utilitiesMonthly: 210, housing: "own", insurance: "other", paysEnergy: true, medicalBills: true },
-    },
-    {
-      title: "Alex, 26, gig worker and student in California",
-      desc: "$1,400/month from delivery apps, rents a room, no insurance",
-      data: { state: "CA", adults: 1, seniors: 0, adultWorkingAge: true, children: [], earnedMonthly: 1400, otherMonthly: 0, rentMonthly: 900, utilitiesMonthly: 60, housing: "rent", insurance: "none", paysEnergy: false, student: true },
-    },
-  ];
+  const DEMOS = {
+    US: [
+      {
+        title: "Maria, single mom in Texas",
+        desc: "2 kids (ages 3 and 8), $2,100/month from work, rents, no insurance",
+        data: { state: "TX", adults: 1, seniors: 0, adultWorkingAge: true, children: [3, 8], earnedMonthly: 2100, otherMonthly: 0, rentMonthly: 1100, utilitiesMonthly: 180, housing: "rent", insurance: "none", paysEnergy: true, needsChildcare: true },
+      },
+      {
+        title: "James & Lena, family of five in Ohio",
+        desc: "Married, 3 kids (1, 6, 11), $3,800/month, kids already on Medicaid",
+        data: { state: "OH", adults: 2, seniors: 0, married: true, adultWorkingAge: true, children: [1, 6, 11], earnedMonthly: 3800, otherMonthly: 0, rentMonthly: 1350, utilitiesMonthly: 240, housing: "rent", insurance: "employer", paysEnergy: true, behindUtilities: true, en_medicaid: true },
+      },
+      {
+        title: "Dorothy, 71, living alone in Florida",
+        desc: "$1,150/month Social Security, owns her home, has hospital bills",
+        data: { state: "FL", adults: 1, seniors: 1, adultWorkingAge: false, children: [], earnedMonthly: 0, otherMonthly: 1150, rentMonthly: 0, utilitiesMonthly: 210, housing: "own", insurance: "other", paysEnergy: true, medicalBills: true },
+      },
+      {
+        title: "Alex, 26, gig worker and student in California",
+        desc: "$1,400/month from delivery apps, rents a room, no insurance",
+        data: { state: "CA", adults: 1, seniors: 0, adultWorkingAge: true, children: [], earnedMonthly: 1400, otherMonthly: 0, rentMonthly: 900, utilitiesMonthly: 60, housing: "rent", insurance: "none", paysEnergy: false, student: true },
+      },
+    ],
+    CA: [
+      {
+        title: "Aisha, single parent in Ontario",
+        desc: "2 kids (4 and 9), AFNI CA$32,000, primary caregiver, tax resident",
+        data: { province: "ON", adults: 1, seniors: 0, applicantAge: 34, children: [4, 9], married: false, primaryCaregiver: true, taxResident: true, eligibleStatus: "citizen", legalStatusOk: true, afniAnnual: 32000, afniUnknown: false },
+      },
+      {
+        title: "Marc & Sophie, shared custody in Quebec",
+        desc: "1 child (7), AFNI CA$55,000, shared custody",
+        data: { province: "QC", adults: 1, seniors: 0, applicantAge: 38, children: [7], primaryCaregiver: true, taxResident: true, eligibleStatus: "citizen", sharedCustody: true, legalStatusOk: true, afniAnnual: 55000 },
+      },
+      {
+        title: "Helen, 72, living alone in British Columbia",
+        desc: "35 years in Canada after 18, low other income, checking OAS/GIS",
+        data: { province: "BC", adults: 1, seniors: 1, applicantAge: 72, children: [], taxResident: true, legalStatusOk: true, yearsInCanadaAfter18: 35, afniAnnual: 4000, afniUnknown: false },
+      },
+    ],
+    MX: [
+      {
+        title: "Rosa, 66, Ciudad de México",
+        desc: "Mexican nationality, lives in Mexico — pensión adultos mayores",
+        data: { entity: "CMX", adults: 1, seniors: 1, applicantAge: 66, gender: "female", mexicanNational: true, residesInMexico: true, children: [] },
+      },
+      {
+        title: "Carmen, 62, Jalisco",
+        desc: "Woman aged 62 — Pensión Mujeres Bienestar",
+        data: { entity: "JAL", adults: 1, seniors: 0, applicantAge: 62, gender: "female", mexicanNational: true, residesInMexico: true, children: [] },
+      },
+      {
+        title: "Diego, 22, Nuevo León",
+        desc: "Not working or studying — Jóvenes Construyendo el Futuro",
+        data: { entity: "NLE", adults: 1, seniors: 0, applicantAge: 22, gender: "male", mexicanNational: true, residesInMexico: true, children: [], working: false, studying: false },
+      },
+    ],
+  };
 
-  // ---------- Setup ----------
+  function money(n, currency) {
+    const cur = currency || (lastResult && lastResult.currency) || "USD";
+    if (cur === "CAD") return "CA$" + Math.round(n).toLocaleString("en-CA");
+    if (cur === "MXN") return "$" + Math.round(n).toLocaleString("es-MX") + " MXN";
+    return "$" + Math.round(n).toLocaleString("en-US");
+  }
+
+  function t(key, vars) {
+    return I18n.t(key, vars);
+  }
+
+  function applyI18n() {
+    $$("[data-i18n]").forEach((el) => {
+      const key = el.getAttribute("data-i18n");
+      el.textContent = t(key);
+    });
+    $$("[data-i18n-aria]").forEach((el) => {
+      el.setAttribute("aria-label", t(el.getAttribute("data-i18n-aria")));
+    });
+    $$("[data-i18n-title]").forEach((el) => {
+      el.setAttribute("title", t(el.getAttribute("data-i18n-title")));
+    });
+    updateCoverageNote();
+    updateIntroLead();
+    updateDisclaimer();
+    refreshDemos();
+    if (lastResult) render();
+  }
+
+  function updateIntroLead() {
+    const n = Countries.programCounts[selectedCountry] || 0;
+    const key = selectedCountry === "CA" ? "introLeadCA" : selectedCountry === "MX" ? "introLeadMX" : "introLeadUS";
+    $("#intro-lead").textContent = t(key, { n });
+  }
+
+  function updateCoverageNote() {
+    const n = Countries.programCounts[selectedCountry] || 0;
+    const country = t("country" + selectedCountry);
+    $("#coverage-note").textContent = t("coverageNote", { n, country });
+  }
+
+  function updateDisclaimer() {
+    const key = selectedCountry === "CA" ? "howCA" : selectedCountry === "MX" ? "howMX" : "howUS";
+    $("#disclaimer-body").textContent = t(key);
+    const asOf =
+      selectedCountry === "CA" ? CAData.asOf :
+      selectedCountry === "MX" ? MXData.asOf :
+      D.asOf;
+    $("#as-of").textContent = asOf;
+  }
+
+  function syncCountryFields() {
+    $$("[data-country-fields]").forEach((el) => {
+      const codes = el.getAttribute("data-country-fields").split(/\s+/);
+      el.hidden = !codes.includes(selectedCountry);
+    });
+  }
+
+  function clearIntake() {
+    form.reset();
+    $("#kids").innerHTML = "";
+    kidId = 0;
+    lastResult = null;
+    stopSpeech();
+    // restore sensible defaults after reset
+    if (form.elements.adultWorkingAge) form.elements.adultWorkingAge.checked = true;
+    if (form.elements.paysEnergy) form.elements.paysEnergy.checked = true;
+    if (form.elements.primaryCaregiver) form.elements.primaryCaregiver.checked = true;
+    if (form.elements.taxResident) form.elements.taxResident.checked = true;
+    if (form.elements.legalStatusOk) form.elements.legalStatusOk.checked = true;
+    if (form.elements.mexicanNational) form.elements.mexicanNational.checked = true;
+    if (form.elements.residesInMexico) form.elements.residesInMexico.checked = true;
+    if (form.elements.adults) form.elements.adults.value = 1;
+  }
+
+  function setCountry(code, { confirmClear = false } = {}) {
+    const next = Countries.normalizeCountry(code) || "US";
+    if (next === selectedCountry) {
+      pendingCountry = next;
+      return;
+    }
+    const hasAnswers = !!form.querySelector("input:checked, .kid-age") || step > 0 || lastResult;
+    if (confirmClear && hasAnswers && !window.confirm(t("switchCountryConfirm"))) {
+      // revert radio
+      const radio = document.querySelector(`input[name="country"][value="${selectedCountry}"]`);
+      if (radio) radio.checked = true;
+      return;
+    }
+    selectedCountry = next;
+    pendingCountry = next;
+    clearIntake();
+    syncCountryFields();
+    updateCoverageNote();
+    updateIntroLead();
+    updateDisclaimer();
+    refreshDemos();
+    show("intro");
+  }
+
+  function refreshDemos() {
+    const list = DEMOS[selectedCountry] || [];
+    $("#demo-list").innerHTML = list.map((d, i) =>
+      `<button type="button" class="demo-btn" data-demo="${i}"><strong>${esc(d.title)}</strong><span>${esc(d.desc)}</span></button>`
+    ).join("");
+  }
+
   function init() {
-    const stateSel = $("#state");
-    stateSel.innerHTML = '<option value="">Choose your state</option>' +
+    $("#state").innerHTML = `<option value="">${t("chooseState")}</option>` +
       D.states.map(([code, name]) => `<option value="${code}">${name}</option>`).join("");
-    $("#as-of").textContent = D.asOf;
+    $("#province").innerHTML = `<option value="">${t("chooseProvince")}</option>` +
+      CAData.provinces.map(([code, name]) => `<option value="${code}">${name}</option>`).join("");
+    $("#entity").innerHTML = `<option value="">${t("chooseEntity")}</option>` +
+      MXData.entities.map(([code, name]) => `<option value="${code}">${name}</option>`).join("");
 
-    $("#demo-list").innerHTML = DEMOS.map((d, i) =>
-      `<button type="button" class="demo-btn" data-demo="${i}"><strong>${d.title}</strong><span>${d.desc}</span></button>`).join("");
+    try {
+      const savedLang = localStorage.getItem("claimable-lang");
+      if (savedLang && I18n.supported.includes(savedLang)) {
+        I18n.setLang(savedLang);
+        $("#lang-select").value = savedLang;
+      }
+    } catch (_) { /* ignore */ }
+    document.documentElement.lang = I18n.getLang() === "en" ? "en" : I18n.getLang();
+
+    $("#lang-select").addEventListener("change", () => {
+      I18n.setLang($("#lang-select").value);
+      document.documentElement.lang = I18n.getLang();
+      try { localStorage.setItem("claimable-lang", I18n.getLang()); } catch (_) { /* ignore */ }
+      applyI18n();
+    });
+
+    $$('input[name="country"]').forEach((r) => {
+      r.addEventListener("change", () => setCountry(r.value, { confirmClear: true }));
+    });
+
     $("#demo-list").addEventListener("click", (e) => {
       const b = e.target.closest("[data-demo]");
       if (!b) return;
-      fillForm(DEMOS[+b.dataset.demo].data);
+      const demo = (DEMOS[selectedCountry] || [])[+b.dataset.demo];
+      if (!demo) return;
+      fillForm(demo.data);
       runScreen();
     });
 
-    $("#start").addEventListener("click", () => { show("form"); goStep(0); });
+    $("#start").addEventListener("click", () => {
+      const chosen = document.querySelector('input[name="country"]:checked');
+      if (!chosen) {
+        alert(t("startNeedCountry"));
+        return;
+      }
+      setCountry(chosen.value);
+      syncCountryFields();
+      show("form");
+      goStep(0);
+    });
     $("#brand-home").addEventListener("click", (e) => { e.preventDefault(); stopSpeech(); show("intro"); });
     $("#add-kid").addEventListener("click", () => addKid());
     $("#back").addEventListener("click", () => (step === 0 ? show("intro") : goStep(step - 1)));
@@ -76,7 +253,6 @@
       render();
     }));
 
-    // Select number contents on focus so typing replaces the value instead of appending to it.
     form.addEventListener("focusin", (e) => {
       if (e.target.matches('input[type="number"]')) setTimeout(() => e.target.select(), 0);
     });
@@ -86,6 +262,9 @@
     const sizeBtn = $("#text-size");
     try { if (localStorage.getItem("claimable-large") === "1") setLarge(true); } catch (_) { /* storage blocked */ }
     sizeBtn.addEventListener("click", () => setLarge(!document.documentElement.classList.contains("large")));
+
+    syncCountryFields();
+    applyI18n();
   }
 
   function setLarge(on) {
@@ -214,15 +393,15 @@
       li.classList.toggle("done", i < n);
       if (i === n) li.setAttribute("aria-current", "step"); else li.removeAttribute("aria-current");
     });
-    $("#next").textContent = n === steps.length - 1 ? "See my results" : "Next";
-    $("#back").textContent = n === 0 ? "Cancel" : "Back";
+    $("#next").textContent = n === steps.length - 1 ? t("seeResults") : t("next");
+    $("#back").textContent = n === 0 ? t("cancel") : t("back");
     $("#form-error").hidden = true;
     window.scrollTo(0, 0);
-    const first = steps[n].querySelector("select, input");
-    if (first) first.focus({ preventScroll: true });
+    const focusTarget = Array.from(steps[n].querySelectorAll("select, input"))
+      .find((el) => !el.closest("[hidden]"));
+    if (focusTarget) focusTarget.focus({ preventScroll: true });
   }
 
-  // ---------- Children ----------
   let kidId = 0;
   function addKid(age) {
     const id = "kid-" + kidId++;
@@ -236,30 +415,95 @@
     if (age === undefined) row.querySelector("input").focus();
   }
 
-  // ---------- Form <-> data ----------
+  function optNum(name) {
+    const el = form.elements[name];
+    if (!el || el.value === "" || el.value === null) return null;
+    const n = parseFloat(el.value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function on(name) {
+    const el = form.elements[name];
+    return !!(el && el.type === "checkbox" && el.checked);
+  }
+
   function readForm() {
-    const f = new FormData(form);
-    const num = (k) => Math.max(0, parseFloat(f.get(k)) || 0);
-    const on = (k) => f.get(k) === "on";
+    const children = $$(".kid-age").map((i) => parseInt(i.value, 10)).filter((a) => Number.isFinite(a));
+    if (selectedCountry === "CA") {
+      const afniUnknown = on("afniUnknown") || form.elements.afniAnnual.value === "";
+      return {
+        province: form.elements.province.value,
+        adults: Math.max(1, Math.round(optNum("adults") || 1)),
+        seniors: Math.round(optNum("seniors") || 0),
+        applicantAge: optNum("applicantAge"),
+        married: on("married"),
+        primaryCaregiver: on("primaryCaregiver"),
+        taxResident: on("taxResident"),
+        sharedCustody: on("sharedCustody"),
+        legalStatusOk: on("legalStatusOk"),
+        eligibleStatus: form.elements.eligibleStatus.value,
+        children,
+        afniAnnual: afniUnknown ? null : optNum("afniAnnual"),
+        afniUnknown,
+        yearsInCanadaAfter18: on("yearsUnknown") ? null : optNum("yearsInCanadaAfter18"),
+        yearsUnknown: on("yearsUnknown"),
+        dtc: form.elements.dtc.value,
+        hasDentalCoverage: on("hasDentalCoverage"),
+        enrolled: {
+          ccb: on("en_ccb"),
+          oas: on("en_oas"),
+          gis: on("en_gis"),
+          cdb: on("en_cdb"),
+          cdcp: on("en_cdcp"),
+        },
+      };
+    }
+    if (selectedCountry === "MX") {
+      return {
+        entity: form.elements.entity.value,
+        adults: Math.max(1, Math.round(optNum("adults") || 1)),
+        seniors: Math.round(optNum("seniors") || 0),
+        applicantAge: optNum("applicantAge"),
+        gender: form.elements.gender.value,
+        mexicanNational: on("mexicanNational"),
+        nationalityUnknown: !on("mexicanNational") && false,
+        residesInMexico: on("residesInMexico"),
+        disabilityCertified: on("disabilityCertified"),
+        children,
+        inPublicSchool: on("inPublicSchool"),
+        studying: on("studying"),
+        working: on("working"),
+        otherScholarship: on("otherScholarship"),
+        schoolLevel: form.elements.schoolLevel.value,
+        enrolled: {
+          pension65: on("en_pension65"),
+          mujeres: on("en_mujeres"),
+          disability: on("en_disability"),
+          becaRita: on("en_becaRita"),
+          becaBenito: on("en_becaBenito"),
+          jcf: on("en_jcf"),
+        },
+      };
+    }
     const enrolled = {};
     ["snap", "medicaid", "wic", "ssi", "tanf", "liheap", "lifeline", "schoolMeals", "housing", "headStart", "childcare"]
       .forEach((k) => (enrolled[k] = on("en_" + k)));
     return {
-      state: f.get("state"),
-      adults: Math.max(1, Math.round(num("adults"))),
-      seniors: Math.round(num("seniors")),
+      state: form.elements.state.value,
+      adults: Math.max(1, Math.round(optNum("adults") || 1)),
+      seniors: Math.round(optNum("seniors") || 0),
       married: on("married"),
       adultWorkingAge: on("adultWorkingAge"),
       disabled: on("disabled"),
       pregnant: on("pregnant"),
-      children: $$(".kid-age").map((i) => parseInt(i.value, 10)).filter((a) => Number.isFinite(a)),
-      earnedMonthly: num("earnedMonthly"),
-      otherMonthly: num("otherMonthly"),
-      rentMonthly: num("rentMonthly"),
-      utilitiesMonthly: num("utilitiesMonthly"),
+      children,
+      earnedMonthly: optNum("earnedMonthly") || 0,
+      otherMonthly: optNum("otherMonthly") || 0,
+      rentMonthly: optNum("rentMonthly") || 0,
+      utilitiesMonthly: optNum("utilitiesMonthly") || 0,
       investmentOver: on("investmentOver"),
-      housing: f.get("housing"),
-      insurance: f.get("insurance"),
+      housing: form.elements.housing.value,
+      insurance: form.elements.insurance.value,
       paysEnergy: on("paysEnergy"),
       behindUtilities: on("behindUtilities"),
       medicalBills: on("medicalBills"),
@@ -270,13 +514,27 @@
   }
 
   function fillForm(d) {
-    form.reset();
-    $("#kids").innerHTML = "";
+    clearIntake();
     Object.entries(d).forEach(([k, v]) => {
       if (k === "children") { v.forEach((a) => addKid(a)); return; }
+      if (k === "enrolled") {
+        Object.entries(v).forEach(([ek, ev]) => {
+          const el = form.elements["en_" + ek];
+          if (el) el.checked = !!ev;
+        });
+        return;
+      }
       const el = form.elements[k];
       if (!el) return;
-      if (el.type === "checkbox") el.checked = !!v; else el.value = v;
+      if (el.type === "checkbox") el.checked = !!v;
+      else if (v !== null && v !== undefined) el.value = v;
+    });
+    // enrolled flags as en_* flat keys in demos
+    Object.keys(d).forEach((k) => {
+      if (k.startsWith("en_")) {
+        const el = form.elements[k];
+        if (el) el.checked = !!d[k];
+      }
     });
   }
 
@@ -284,54 +542,90 @@
     const err = $("#form-error");
     let msg = "";
     if (step === 0) {
-      if (!form.elements.state.value) msg = "Please choose your state.";
-      else if ((+form.elements.seniors.value || 0) > (+form.elements.adults.value || 1)) msg = "The number of people 65+ can't be more than the number of adults.";
-      else if ($$(".kid-age").some((i) => i.value === "" || +i.value < 0 || +i.value > 18)) msg = "Please enter each child's age (0–18), or remove the empty row.";
+      if (selectedCountry === "US" && !form.elements.state.value) msg = t("errState");
+      else if (selectedCountry === "CA" && !form.elements.province.value) msg = t("errProvince");
+      else if (selectedCountry === "MX" && !form.elements.entity.value) msg = t("errEntity");
+      else if ((+form.elements.seniors.value || 0) > (+form.elements.adults.value || 1)) msg = t("errSeniors");
+      else if ($$(".kid-age").some((i) => i.value === "" || +i.value < 0 || +i.value > 18)) msg = t("errKids");
+      else if ((selectedCountry === "CA" || selectedCountry === "MX") && form.elements.applicantAge.value === "") msg = t("errAge");
     }
-    if (step === 1) {
-      const bad = ["earnedMonthly", "otherMonthly", "rentMonthly", "utilitiesMonthly"].find((k) => +form.elements[k].value < 0);
-      if (bad) msg = "Amounts can't be negative.";
+    if (step === 1 && selectedCountry === "US") {
+      const bad = ["earnedMonthly", "otherMonthly", "rentMonthly", "utilitiesMonthly"].find((k) => {
+        const el = form.elements[k];
+        return el && el.value !== "" && +el.value < 0;
+      });
+      if (bad) msg = t("errNegative");
+    }
+    if (step === 1 && selectedCountry === "CA") {
+      if (form.elements.afniAnnual.value !== "" && +form.elements.afniAnnual.value < 0) msg = t("errNegative");
     }
     err.textContent = msg;
     err.hidden = !msg;
     return !msg;
   }
 
-  // ---------- Results ----------
   function runScreen() {
-    lastResult = window.Claimable.screen(readForm());
-    $("#save-status").hidden = true;
+    try {
+      lastResult = Countries.screen(selectedCountry, readForm());
+    } catch (e) {
+      $("#form-error").textContent = e.message || t("startNeedCountry");
+      $("#form-error").hidden = false;
+      return;
+    }
+    const saveStatus = $("#save-status");
+    if (saveStatus) saveStatus.hidden = true;
     filter = "all";
     $$(".chip").forEach((x) => x.setAttribute("aria-selected", String(x.dataset.filter === "all")));
+    updateDisclaimer();
     render();
     show("results");
     views.results.focus();
   }
 
+  function placeName() {
+    const h = readForm();
+    if (selectedCountry === "CA") {
+      return (CAData.provinces.find(([c]) => c === h.province) || [, ""])[1];
+    }
+    if (selectedCountry === "MX") {
+      return (MXData.entities.find(([c]) => c === h.entity) || [, ""])[1];
+    }
+    return (D.states.find(([c]) => c === h.state) || [, ""])[1];
+  }
+
   function render() {
-    const { results, totals, ctx } = lastResult;
-    const stateName = (D.states.find(([c]) => c === readForm().state) || [, ""])[1];
-    $("#results-household").textContent = `${ctx.size}-person household · ${stateName} · ${Math.round(ctx.pct)}% of the poverty line`;
+    if (!lastResult) return;
+    const { results, totals, ctx, currency } = lastResult;
+    const place = placeName();
+    if (selectedCountry === "US") {
+      $("#results-household").textContent = t("householdUS", { size: ctx.size, place, pct: Math.round(ctx.pct || 0) });
+    } else if (selectedCountry === "CA") {
+      $("#results-household").textContent = t("householdCA", { size: ctx.size, place });
+    } else {
+      $("#results-household").textContent = t("householdMX", { size: ctx.size, place });
+    }
 
     if (totals.likelyAnnual > 0) {
-      $("#results-title").textContent = `You may be leaving about ${money(totals.likelyAnnual)} a year on the table.`;
+      $("#results-title").textContent = t("titleMoney", { money: money(totals.likelyAnnual, currency) });
     } else if (totals.likelyCount > 0) {
-      $("#results-title").textContent = `You may qualify for ${totals.likelyCount} program${totals.likelyCount > 1 ? "s" : ""}.`;
+      $("#results-title").textContent = t("titleCount", { n: totals.likelyCount });
     } else {
-      $("#results-title").textContent = "We didn't find strong matches, but check the list below.";
+      $("#results-title").textContent = t("titleNone");
     }
-    const parts = [`${totals.likelyCount} likely match${totals.likelyCount === 1 ? "" : "es"}`];
-    if (totals.maybeCount) parts.push(`${totals.maybeCount} more worth checking${totals.maybeAnnual ? ` (up to ${money(totals.maybeAnnual)} more)` : ""}`);
-    $("#results-sub").textContent = parts.join(", ") + ". Estimates only; the dollar total counts food, cash, and tax credits, not health coverage.";
+    const maybe = totals.maybeCount
+      ? t("subMaybe", { n: totals.maybeCount }) + (totals.maybeAnnual ? ` (up to ${money(totals.maybeAnnual, currency)})` : "")
+      : "";
+    $("#results-sub").textContent = t("subLine", { likely: totals.likelyCount, maybe });
 
+    const known = new Set(["Food", "Taxes", "Health", "Utilities", "Children", "Seniors"]);
     const pass = (r) => filter === "all" ||
-      (filter === "other" ? !["Food", "Taxes", "Health", "Utilities"].includes(r.category) : r.category === filter);
+      (filter === "other" ? !known.has(r.category) : r.category === filter);
     const by = (s) => results.filter((r) => r.status === s);
 
-    fillList("#list-likely", by("likely").filter(pass), "No likely matches in this category.");
-    fillList("#list-maybe", by("maybe").filter(pass), "Nothing here.");
-    fillList("#list-enrolled", by("enrolled"), "None.", true);
-    fillList("#list-unlikely", by("unlikely"), "None.", true);
+    fillList("#list-likely", by("likely").filter(pass), t("emptyLikely"));
+    fillList("#list-maybe", by("maybe").filter(pass), t("emptyMaybe"));
+    fillList("#list-enrolled", by("enrolled"), t("none"), true);
+    fillList("#list-unlikely", by("unlikely"), t("none"), true);
     $("#count-enrolled").textContent = by("enrolled").length;
     $("#count-unlikely").textContent = by("unlikely").length;
   }
@@ -342,12 +636,16 @@
 
   function fillList(sel, items, emptyMsg, compact) {
     const el = $(sel);
-    if (!items.length) { el.innerHTML = `<p class="empty">${emptyMsg}</p>`; return; }
+    if (!items.length) { el.innerHTML = `<p class="empty">${esc(emptyMsg)}</p>`; return; }
     el.innerHTML = items.map((r) => card(r, compact)).join("");
   }
 
   function card(r, compact) {
     const why = r.reasons.length ? `<ul class="why">${r.reasons.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
+    const missing = (r.missingQuestions && r.missingQuestions.length)
+      ? `<p class="hint small">Follow-up: ${esc(r.missingQuestions.join(", "))}</p>` : "";
+    const avail = r.applicationAvailability
+      ? `<p class="hint small">Application: ${esc(r.applicationAvailability)}</p>` : "";
     if (compact) {
       return `<article class="card ${r.status}"><div class="card-head"><div><span class="tag">${esc(r.category)}</span><h3>${esc(r.name)}</h3></div></div>${why}</article>`;
     }
@@ -357,20 +655,22 @@
         ${r.valueLabel ? `<div class="value">${esc(r.valueLabel)}</div>` : ""}
       </div>
       <p class="blurb">${esc(r.blurb)}</p>
-      <p class="label-like small" style="margin:8px 0 2px">Why we think so</p>
+      <p class="label-like small" style="margin:8px 0 2px">${esc(t("whyLabel"))}</p>
       ${why}
-      <details><summary>What to bring</summary><ul class="docs">${r.docs.map((d) => `<li>${esc(d)}</li>`).join("")}</ul></details>
+      ${missing}
+      ${avail}
+      <details><summary>${esc(t("docsLabel"))}</summary><ul class="docs">${r.docs.map((d) => `<li>${esc(d)}</li>`).join("")}</ul></details>
       <div class="card-foot">
         <a class="btn btn-primary" href="${esc(r.apply.url)}" target="_blank" rel="noopener">${esc(r.apply.label)} ↗</a>
-        ${r.id === "snap" && form.elements.state.value === "TX" ? '<a class="btn btn-ghost no-print" href="apply/index.html">Try application autofill</a>' : ""}
+        ${r.id === "snap" && lastResult.country === "US" && form.elements.state.value === "TX"
+          ? `<a class="btn btn-ghost no-print" href="apply/index.html" hreflang="en">${esc(t("tryAutofill"))}</a>` : ""}
         <a class="source" href="${esc(r.source.url)}" target="_blank" rel="noopener">Source: ${esc(r.source.label)}</a>
       </div>
     </article>`;
   }
 
-  // ---------- Read aloud ----------
   function toggleSpeech() {
-    if (!("speechSynthesis" in window)) { alert("Read-aloud isn't supported in this browser."); return; }
+    if (!("speechSynthesis" in window)) { alert(t("speechUnsupported")); return; }
     if (speechSynthesis.speaking) { stopSpeech(); return; }
     const { results } = lastResult;
     const lines = [$("#results-title").textContent, $("#results-sub").textContent];
@@ -378,14 +678,15 @@
       lines.push(`${r.name}. ${r.valueLabel}. ${r.reasons.join(" ")}`);
     });
     const u = new SpeechSynthesisUtterance(lines.join(" \n"));
+    u.lang = I18n.speechLang();
     u.rate = 0.95;
-    u.onend = () => ($("#read").textContent = "🔊 Read results aloud");
-    $("#read").textContent = "⏹ Stop reading";
+    u.onend = () => ($("#read").textContent = t("read"));
+    $("#read").textContent = t("stopRead");
     speechSynthesis.speak(u);
   }
   function stopSpeech() {
     if ("speechSynthesis" in window) speechSynthesis.cancel();
-    $("#read").textContent = "🔊 Read results aloud";
+    if ($("#read")) $("#read").textContent = t("read");
   }
 
   init();

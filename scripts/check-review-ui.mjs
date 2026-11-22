@@ -8,17 +8,30 @@ let browser;
 try {
   const engine = process.argv.includes("--webkit") ? webkit : chromium;
   browser = await engine.launch(engine === chromium ? { executablePath: process.env.CLAIMABLE_CHROME_PATH } : {});
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: "en-US" });
+  page.setDefaultTimeout(15000);
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.goto(site.origin);
+  const language = page.getByRole("combobox", { name: "Language" });
+  await language.selectOption("es");
+  await page.getByRole("radio", { name: "Estados Unidos" }).waitFor();
+  await language.selectOption("en");
   await page.getByText("Try an example household", { exact: true }).click();
+  const acceptCountryChange = dialog => dialog.accept();
+  page.on("dialog", acceptCountryChange);
+  for (const [country, sample] of [["Canada", /Aisha, single parent in Ontario/], ["Mexico", /Carmen, 62, Jalisco/], ["United States", /Maria, single mom in Texas/]]) {
+    await page.getByRole("radio", { name: country, exact: true }).check();
+    await page.getByRole("button", { name: sample }).waitFor();
+  }
+  page.off("dialog", acceptCountryChange);
   await page.getByRole("button", { name: /Maria, single mom in Texas/ }).click();
   await page.getByRole("link", { name: "Try application autofill" }).click();
   await page.getByRole("heading", { name: "Choose answers to fill" }).waitFor();
   assert.equal(await page.getByRole("button", { name: "Start hosted practice" }).isVisible(), false);
   await page.getByRole("checkbox", { name: /Monthly utilities/ }).uncheck();
   await page.getByRole("button", { name: "Practice on this device" }).click();
+  await page.waitForURL(url => url.pathname === "/practice/index.html", { waitUntil: "load" });
   assert.equal(await page.getByLabel("Household size").inputValue(), "3");
   assert.equal(await page.getByLabel("Monthly rent").inputValue(), "1100");
   assert.equal(await page.getByLabel("Monthly utilities").inputValue(), "");
