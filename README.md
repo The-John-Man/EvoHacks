@@ -78,3 +78,7 @@ and can explain all of it. See the demo video.
 - Photograph a benefits letter or bill so it can be read automatically, with the eligibility decision still made in code
 - SMS version for people without smartphones
 - "Save my checklist" as a PDF
+
+## North American coverage
+
+The homepage includes official benefit guides for Canada and Mexico. Personalized screening currently covers U.S. programs. See the [implementation plan](docs/north-america.md) for the first two screening pilots, regional research sources and EvoHacks prize opportunities.
