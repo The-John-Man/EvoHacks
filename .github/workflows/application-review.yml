@@ -2,7 +2,6 @@ name: Application review
 
 on:
   pull_request:
-    branches: [main]
   push:
     branches: [main]
   workflow_dispatch:
@@ -30,3 +29,11 @@ jobs:
         run: npm run test:review
       - name: Review and correct a draft in mobile WebKit
         run: npm run test:review -- --webkit
+      - name: Test the installed Texas helper against an offline form
+        run: npm run test:texas-extension
+      - name: Package the desktop browser extension
+        uses: actions/upload-artifact@v4
+        with:
+          name: claimable-texas-snap-extension
+          path: extensions/texas-snap/
+          if-no-files-found: error

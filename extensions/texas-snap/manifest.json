@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Claimable Texas SNAP",
+  "description": "Place a reviewed Claimable answer into a matching application field you choose on Your Texas Benefits.",
+  "version": "1.0.0",
+  "minimum_chrome_version": "102",
+  "permissions": ["activeTab", "scripting", "storage", "alarms"],
+  "background": { "service_worker": "expiry.js", "type": "module" },
+  "action": { "default_popup": "popup.html", "default_title": "Claimable Texas SNAP" },
+  "content_security_policy": { "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'none'" }
+}

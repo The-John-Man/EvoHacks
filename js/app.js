@@ -21,6 +21,7 @@
   let filter = "all";
   let selectedCountry = "US";
   let pendingCountry = "US";
+  let importedIntake = false;
 
   const DEMOS = {
     US: [
@@ -140,6 +141,7 @@
   }
 
   function clearIntake() {
+    importedIntake = false;
     form.reset();
     $("#kids").innerHTML = "";
     kidId = 0;
@@ -258,6 +260,13 @@
     });
 
     initAuth();
+    views.results.addEventListener("click", (event) => {
+      const trigger = event.target.closest("[data-tx-review]");
+      if (!trigger) return;
+      if ($("#tx-live-panel")) closeTexasReview();
+      else openTexasReview(trigger);
+    });
+    window.addEventListener("pagehide", closeTexasReview);
 
     const sizeBtn = $("#text-size");
     try { if (localStorage.getItem("claimable-large") === "1") setLarge(true); } catch (_) { /* storage blocked */ }
@@ -274,6 +283,7 @@
   }
 
   function show(name) {
+    if (name !== "results") closeTexasReview();
     currentView = name;
     Object.entries(views).forEach(([k, el]) => (el.hidden = k !== name));
     window.scrollTo(0, 0);
@@ -515,6 +525,8 @@
 
   function fillForm(d) {
     clearIntake();
+    // Imported checklists and examples cannot establish the provenance of a real answer.
+    importedIntake = true;
     Object.entries(d).forEach(([k, v]) => {
       if (k === "children") { v.forEach((a) => addKid(a)); return; }
       if (k === "enrolled") {
@@ -641,13 +653,15 @@
   }
 
   function card(r, compact) {
+    const texasSnap = r.id === "snap" && lastResult.country === "US" && form.elements.state.value === "TX";
+    const liveButton = texasSnap ? `<button type="button" data-tx-review aria-expanded="false" class="btn btn-ghost no-print">${esc(t("txTitle"))}</button>` : "";
     const why = r.reasons.length ? `<ul class="why">${r.reasons.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
     const missing = (r.missingQuestions && r.missingQuestions.length)
       ? `<p class="hint small">Follow-up: ${esc(r.missingQuestions.join(", "))}</p>` : "";
     const avail = r.applicationAvailability
       ? `<p class="hint small">Application: ${esc(r.applicationAvailability)}</p>` : "";
     if (compact) {
-      return `<article class="card ${r.status}"><div class="card-head"><div><span class="tag">${esc(r.category)}</span><h3>${esc(r.name)}</h3></div></div>${why}</article>`;
+      return `<article class="card ${r.status}"><div class="card-head"><div><span class="tag">${esc(r.category)}</span><h3>${esc(r.name)}</h3></div></div>${why}${liveButton}</article>`;
     }
     return `<article class="card ${r.status}" aria-label="${esc(r.name)}">
       <div class="card-head">
@@ -662,11 +676,87 @@
       <details><summary>${esc(t("docsLabel"))}</summary><ul class="docs">${r.docs.map((d) => `<li>${esc(d)}</li>`).join("")}</ul></details>
       <div class="card-foot">
         <a class="btn btn-primary" href="${esc(r.apply.url)}" target="_blank" rel="noopener">${esc(r.apply.label)} ↗</a>
-        ${r.id === "snap" && lastResult.country === "US" && form.elements.state.value === "TX"
+        ${liveButton}
+        ${texasSnap
           ? `<a class="btn btn-ghost no-print" href="apply/index.html" hreflang="en">${esc(t("tryAutofill"))}</a>` : ""}
         <a class="source" href="${esc(r.source.url)}" target="_blank" rel="noopener">Source: ${esc(r.source.label)}</a>
       </div>
     </article>`;
+  }
+
+  function closeTexasReview() {
+    $("#tx-live-panel")?.remove();
+    document.querySelector('[data-tx-review][aria-expanded="true"]')?.setAttribute("aria-expanded", "false");
+  }
+
+  function openTexasReview(trigger) {
+    const panel = $("#tx-live-template").content.firstElementChild.cloneNode(true);
+    for (const el of panel.querySelectorAll("[data-i18n]")) el.textContent = t(el.dataset.i18n);
+    trigger.closest(".card").append(panel);
+    trigger.setAttribute("aria-expanded", "true");
+    $("#tx-live-heading").focus();
+    const review = $("#tx-review-form");
+    const confirmed = $("#tx-confirmed");
+    const values = $("#tx-values");
+    const status = $("#tx-status");
+    if (!importedIntake) {
+      // The screener combines rent and mortgage and normalizes blank amounts to zero.
+      // Only a renter's raw rent value has the meaning needed here.
+      if (form.elements.housing.value === "rent") review.elements.rentMonthly.value = form.elements.rentMonthly.value;
+      review.elements.utilitiesMonthly.value = form.elements.utilitiesMonthly.value;
+    }
+
+    function invalidate() {
+      confirmed.hidden = true;
+      delete values.dataset.claimableReviewed;
+      values.replaceChildren();
+      status.textContent = "";
+    }
+    review.addEventListener("input", invalidate);
+    review.addEventListener("reset", invalidate);
+    review.addEventListener("submit", event => {
+      event.preventDefault();
+      invalidate();
+      for (const input of review.querySelectorAll("input")) {
+        if (!input.value) continue;
+        const row = document.createElement("div");
+        const label = input.labels[0].querySelector("span").textContent;
+        const term = document.createElement("dt");
+        term.textContent = label;
+        const description = document.createElement("dd");
+        const answer = document.createElement("span");
+        answer.dataset.answerKey = input.name;
+        answer.textContent = input.value.replace(/^0+(?=\d)/, "");
+        const copy = document.createElement("button");
+        copy.type = "button";
+        copy.className = "tool";
+        copy.textContent = t("txCopy");
+        copy.setAttribute("aria-label", t("txCopyLabel", { label }));
+        copy.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(answer.textContent);
+            status.textContent = t("txCopied", { label });
+          } catch {
+            const range = document.createRange();
+            range.selectNodeContents(answer);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            status.textContent = t("txSelectCopy");
+          }
+        });
+        description.append(answer, " ", copy);
+        row.append(term, description);
+        values.append(row);
+      }
+      const hasAnswers = values.childElementCount > 0;
+      if (hasAnswers) values.dataset.claimableReviewed = "texas-snap";
+      values.hidden = !hasAnswers;
+      confirmed.querySelector("details").hidden = !hasAnswers;
+      confirmed.querySelector("h4").textContent = t(hasAnswers ? "txReviewed" : "txBlank");
+      confirmed.hidden = false;
+      confirmed.querySelector("h4").focus();
+    });
   }
 
   function toggleSpeech() {

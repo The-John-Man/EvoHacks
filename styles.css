@@ -185,6 +185,12 @@ details[open] > summary::before { transform: rotate(90deg); }
 .keypad-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; max-width: 17rem; }
 .keypad-keys button:last-child { grid-column: 1 / -1; }
 .btn:disabled { opacity: .65; cursor: wait; }
+.tx-live { margin-top: 1rem; padding-top: .75rem; border-top: 1px solid var(--line); }
+.tx-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: .75rem; margin-bottom: 1rem; }
+.tx-fields label { display: grid; align-content: start; gap: .25rem; margin: 0; }
+.tx-live .review-summary div { align-items: center; }
+.tx-live .review-summary dd { margin-left: auto; }
+.tx-live a.btn { display: inline-flex; align-items: center; text-decoration: none; }
 
 @media print {
   .topbar, .no-print, .footer, .filters, .actions { display: none !important; }

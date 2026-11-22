@@ -6,6 +6,7 @@
     "build": "node scripts/build-site.mjs",
     "test": "node --test",
     "test:review": "node scripts/check-review-ui.mjs",
+    "test:texas-extension": "node scripts/check-texas-extension.mjs",
     "autofill:demo": "node scripts/autofill.mjs"
   },
   "dependencies": {

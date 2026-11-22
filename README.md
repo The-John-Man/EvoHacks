@@ -18,6 +18,17 @@ python -m http.server 5317
 
 Then visit http://localhost:5317. Choose a country and language, or open **Try an example household**.
 
+## Apply for Texas SNAP online
+
+1. Run Claimable on localhost or HTTPS. Complete your own U.S. screening, select Texas, and open **Prepare your Texas SNAP application** on the SNAP result. Review your household size, monthly rent and monthly utilities. Leave an answer blank to skip it. Example households and restored checklists start with an empty review.
+2. Select **Confirm my answers**. On iPhone or any browser, choose **Open Your Texas Benefits**, start your application there, and switch back to Claimable to copy individual answers as needed. The link opens the state's portal in a new tab. Opening it sends no answers. [Texas.gov SNAP application entry](https://www.texas.gov/family-support-services/food-assistance)
+3. For desktop autofill, install the **Claimable Texas SNAP** extension once. In Chrome or Edge, open the extensions manager, enable **Developer mode**, choose **Load unpacked**, and select the folder containing the extension’s `manifest.json`. Use the [extension folder in your checkout](extensions/texas-snap) or extract the **claimable-texas-snap-extension** ZIP from the GitHub Actions run for your commit.
+4. With the confirmed answers visible on Claimable, open the extension and select **Use reviewed answers**. Open the Texas portal from Claimable and navigate to the relevant application page. Open the extension there and choose **Fill matching fields on this page**. Check which values appeared. The helper skips existing answers and unrecognized or ambiguous questions. Read each remaining question and supply the detail it requests. Review the application and personally submit it on the Texas website.
+
+The extension keeps the confirmed numbers in browser-session memory for up to 15 minutes of use. You can clear them from the popup. If you change an answer on Claimable, confirm it again and select **Use reviewed answers** again. Anything already entered on the agency form must be reviewed and corrected there. These actions use no model tokens, MojoAuth account or hosted browser. Your Texas Benefits controls its own sign-in, draft saving, and submission.
+
+**Verification.** The browser tests use locally supplied questions and exercise the real extension. The public portal timed out during development on November 22, 2026. Compatibility with the current production application questions and the final agency review screen still needs verification in a legitimate applicant session.
+
 ## Practice application autofill
 
 Choose **United States** and **English**, then **Try an example household → Maria, single mom in Texas**. Open **Try application autofill** in her SNAP result, choose which fictional answers to use, and select **Practice on this device**. Change the rent and review the form. A field you uncheck stays blank. The real agency application is linked separately.
@@ -52,6 +63,7 @@ npm test
 npx playwright install chromium webkit
 npm run test:review
 npm run test:review -- --webkit
+npm run test:texas-extension
 ```
 
 U.S. tests cover SNAP/EITC/CTC/Medicaid/SSI math. Country tests cover the dispatcher (CA/MX never hit U.S. rules), CCB estimates, OAS age/residence boundaries, and Mexico pension / Mujeres Bienestar windows. Auth tests cover OIDC settings, sessions, GitHub Pages base path, and saved checklists.
@@ -120,7 +132,7 @@ tests/                  Screening, sign-in, autofill and session ownership tests
 - **Federal programs only** for Canada and Mexico in this release. Provincial/territorial and estado/municipal supplements are **not** fully screened — use the official Benefits Finder / Bienestar directory (linked on the homepage).
 - We do **not** collect SIN, CURP, bank, or ID numbers. Those belong on the agency checklist.
 - Exact payment is not guaranteed. Where formulas are incomplete or household-specific, we show eligibility plus “agency calculates.”
-- Application autofill is available on the fictional Texas SNAP practice form. Agency availability is a maintained label (`open` / `continuous` / `unknown`).
+- Texas SNAP has an on-device application handoff and a separate fictional practice form. Other countries and programs use the agency links shown with their results. Agency availability is a maintained label (`open` / `continuous` / `unknown`).
 - Saved checklists live in one browser. They don't sync across devices.
 - U.S. path still uses federal rules; many states have higher limits or extra programs. Call **211** for local help.
 - Immigration-status modeling is limited to the questions each country’s published rules require.

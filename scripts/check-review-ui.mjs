@@ -26,6 +26,10 @@ try {
   }
   page.off("dialog", acceptCountryChange);
   await page.getByRole("button", { name: /Maria, single mom in Texas/ }).click();
+  await page.locator("[data-tx-review]").click();
+  const intake = page.locator("#tx-review-form");
+  for (const input of await intake.locator("input").all()) assert.equal(await input.inputValue(), "");
+  await page.locator("[data-tx-review]").click();
   await page.getByRole("link", { name: "Try application autofill" }).click();
   await page.getByRole("heading", { name: "Choose answers to fill" }).waitFor();
   assert.equal(await page.getByRole("button", { name: "Start hosted practice" }).isVisible(), false);
@@ -44,6 +48,35 @@ try {
   await page.getByRole("button", { name: "Review answers" }).click();
   await page.getByRole("button", { name: "Finish practice" }).click();
   await page.getByRole("heading", { name: "Practice complete" }).waitFor();
+
+  // A fresh applicant can confirm only the answers intended for the agency.
+  await page.goto(site.origin);
+  await page.locator("#start").click();
+  await page.locator("#state").selectOption("TX");
+  await page.locator("#next").click();
+  await page.locator("#rentMonthly").fill("725.50");
+  await page.locator("#utilitiesMonthly").fill("0");
+  await page.locator("#next").click();
+  await page.locator("#housing").selectOption("rent");
+  await page.locator("#next").click();
+  await page.locator("[data-tx-review]").click();
+  assert.equal(Number(await intake.locator('[name="rentMonthly"]').inputValue()), 725.5);
+  assert.equal(await intake.locator('[name="utilitiesMonthly"]').inputValue(), "0");
+  await intake.locator('[name="householdSize"]').fill("");
+  await intake.getByRole("button").click();
+  const reviewed = page.locator('[data-claimable-reviewed="texas-snap"]');
+  await reviewed.waitFor();
+  assert.equal(await reviewed.locator("[data-answer-key]").count(), 2);
+  assert.equal(await reviewed.locator('[data-answer-key="utilitiesMonthly"]').innerText(), "0");
+  const agency = page.locator("#tx-confirmed a").first();
+  assert.equal(await agency.getAttribute("href"), "https://yourtexasbenefits.com/Learn/Home");
+  assert.equal(await agency.getAttribute("target"), "_blank");
+  assert.ok((await agency.getAttribute("rel")).includes("noreferrer"));
+  await intake.locator('[name="rentMonthly"]').fill("735");
+  assert.equal(await reviewed.count(), 0);
+  await intake.getByRole("button").click();
+  await page.locator("#edit").click();
+  assert.equal(await reviewed.count(), 0);
 
   // Exercise the hosted UI contract without using a provider account in CI.
   const sessionId = "a11c0000-0000-4000-8000-000000000001";
@@ -82,7 +115,7 @@ try {
     { method: "DELETE", id: sessionId, auth: "Bearer fixture-id-token", body: null },
   ]);
   assert.deepEqual(errors, []);
-  console.log(`Mobile ${engine.name()} passed: local practice and mocked hosted create, resume, and end.`);
+  console.log(`Mobile ${engine.name()} passed: Texas application review, practice, and hosted viewer lifecycle.`);
 } finally {
   await browser?.close();
   await site.close();

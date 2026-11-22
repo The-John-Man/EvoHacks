@@ -378,6 +378,32 @@
       </aside>
     </section>
   </main>
+  <template id="tx-live-template">
+    <section id="tx-live-panel" class="tx-live no-print" aria-labelledby="tx-live-heading">
+      <h3 id="tx-live-heading" tabindex="-1" data-i18n="txTitle">Prepare your Texas SNAP application</h3>
+      <p data-i18n="txInstructions">Check each answer for your own application. Leave a field blank to skip it. Texas may ask for more detail.</p>
+      <form id="tx-review-form" autocomplete="off">
+        <div class="tx-fields">
+          <label><span data-i18n="txHousehold">Household size</span><input name="householdSize" type="text" inputmode="numeric" pattern="[1-9][0-9]*" maxlength="3"></label>
+          <label><span data-i18n="txRent">Monthly rent (USD)</span><input name="rentMonthly" type="text" inputmode="decimal" pattern="[0-9]+(\.[0-9]{1,2})?" maxlength="12"></label>
+          <label><span data-i18n="txUtilities">Monthly utilities (USD)</span><input name="utilitiesMonthly" type="text" inputmode="decimal" pattern="[0-9]+(\.[0-9]{1,2})?" maxlength="12"></label>
+        </div>
+        <button class="btn btn-ghost" type="submit" data-i18n="txConfirm">Confirm my answers</button>
+      </form>
+      <div id="tx-confirmed" hidden>
+        <h4 tabindex="-1" data-i18n="txReviewed">Your reviewed answers</h4>
+        <dl class="review-summary" id="tx-values"></dl>
+        <p data-i18n="txNext">Open Your Texas Benefits in a new tab. On a phone, return here to copy individual answers. Review and submit on the Texas website.</p>
+        <p><a class="btn btn-primary" href="https://yourtexasbenefits.com/Learn/Home" target="_blank" rel="noopener noreferrer" data-i18n="txOpen">Open Your Texas Benefits</a></p>
+        <details>
+          <summary data-i18n="txDesktop">Fill a selected field in desktop Chrome or Edge</summary>
+          <a href="https://github.com/The-John-Man/EvoHacks/blob/feat/live-texas-snap-handoff/README.md#apply-for-texas-snap-online" target="_blank" rel="noopener noreferrer" data-i18n="txInstall">Install the optional Claimable extension</a>
+          <p data-i18n="txUse">On Claimable, open the extension and choose “Use reviewed answers”. On the Texas form, choose “Fill matching fields on this page”. For a remaining field, select it and choose its answer in the extension.</p>
+        </details>
+      </div>
+      <p id="tx-status" class="hint" role="status"></p>
+    </section>
+  </template>
 
   <footer class="footer wrap">
     <p><span data-i18n="footer">Built for EvoHacks II · Not affiliated with any government agency</span> · <a href="https://www.usa.gov/benefits" rel="noopener">USA.gov</a> · <a href="https://www.canada.ca/en/services/benefits/finder.html" rel="noopener">Canada Benefits Finder</a> · <a href="https://www.programasparaelbienestar.gob.mx/" rel="noopener">Bienestar</a></p>
