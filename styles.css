@@ -30,7 +30,9 @@
 html.large { --fs: 20px; }
 
 * { box-sizing: border-box; }
-html { font-size: var(--fs); }
+/* "html:root" / "html body" outrank the global html/body rules MojoAuth's SDK injects at runtime. */
+html:root { font-size: var(--fs); }
+html body { background: var(--bg); }
 body {
   margin: 0; background: var(--bg); color: var(--ink);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.55;
@@ -62,6 +64,15 @@ a { color: var(--brand); }
 }
 .choice:has(input:checked) { border-color: var(--brand); background: var(--brand-soft); }
 .choice input { width: 18px; height: 18px; accent-color: var(--brand); }
+.tool-text { padding: 0 12px; font-weight: 600; }
+.account { display: flex; align-items: center; gap: 8px; }
+.account-email { font-size: .85rem; color: var(--ink-soft); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 520px) { .account-email { display: none; } }
+.welcome-back { background: var(--brand-soft); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; }
+.welcome-back p { margin: 0 0 10px; }
+.signin-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 8px; }
+.save-status { background: var(--brand-soft); border-radius: 10px; padding: 10px 14px; font-weight: 600; }
+.linklike { background: none; border: 0; padding: 0; font: inherit; color: var(--brand); text-decoration: underline; cursor: pointer; min-height: 44px; }
 
 .view { padding: 32px 0 48px; }
 h1 { font-size: clamp(1.7rem, 5vw, 2.3rem); line-height: 1.2; margin: 0 0 12px; }

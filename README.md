@@ -6,6 +6,8 @@ Claimable asks a few plain-language questions and checks federal programs for th
 
 Built for EvoHacks II, themed "Projects for Social Good."
 
+[Team roadmap and demo plan](docs/hackathon-plan.md)
+
 ## Run it
 
 No build step and no dependencies. Open `index.html` in a browser, or serve the folder:
@@ -19,28 +21,55 @@ Then visit http://localhost:5317. Choose a country and language, or open **Try a
 ## Test it
 
 ```
-node --test tests/rules.test.js tests/countries.test.js
+node --test tests/rules.test.js tests/countries.test.js tests/auth.test.js
 ```
 
-U.S. tests cover SNAP/EITC/CTC/Medicaid/SSI math. Country tests cover the dispatcher (CA/MX never hit U.S. rules), CCB estimates, OAS age/residence boundaries, and Mexico pension / Mujeres Bienestar windows.
+U.S. tests cover SNAP/EITC/CTC/Medicaid/SSI math. Country tests cover the dispatcher (CA/MX never hit U.S. rules), CCB estimates, OAS age/residence boundaries, and Mexico pension / Mujeres Bienestar windows. Auth tests cover OIDC settings, sessions, GitHub Pages base path, and saved checklists.
+
+## Optional sign-in (MojoAuth, OpenID Connect)
+
+People can sign in passwordlessly with [MojoAuth](https://mojoauth.com) to **save their checklist and reopen it later**,
+for example after gathering documents. Signing in is never required to use the screener.
+
+**How it works:** OpenID Connect authorization code flow with **PKCE (S256)** and `state`, as a **public client**
+(no client secret; the token request sends only `client_id`, i.e. token endpoint auth method "none").
+It uses the standard browser OIDC library [oidc-client-ts](https://github.com/authts/oidc-client-ts), which also
+validates the ID token (signature, issuer, audience, nonce). Scopes: `openid profile email`.
+
+1. The user clicks **Save my checklist** (or **Sign in**). Claimable explains what's shared, then redirects to MojoAuth's hosted login page.
+2. The user enters their email and the one-time code.
+3. MojoAuth redirects to `/auth/callback`, which exchanges the code using the PKCE verifier and saves the checklist if that's why they signed in.
+4. The user lands back on their results, with their email shown in the header.
+
+**Setup:** set `oidcIssuer` and `oidcClientId` in `js/config.js`. Both are public values. This is a static site
+with no build step, so they live there instead of in environment variables. In the MojoAuth dashboard, allow these redirect URLs:
+`http://localhost:5321/auth/callback` (any localhost port works in test mode) and `https://<user>.github.io/<repo>/auth/callback`.
+Leave either value empty and sign-in is hidden.
+
+**Privacy:** MojoAuth only sees the email used to sign in. Household answers are saved in that browser's local storage,
+keyed by the user's OIDC `sub`, and never sent to a server. Users can delete their saved checklist with one click.
+OIDC tokens are kept in `sessionStorage` for that tab only, and are used only to sign out of MojoAuth too.
 
 ## How it works
 
 ```
-index.html              Country + language chooser, 3-step form, results
+index.html              Country + language chooser, 3-step form, results, optional sign-in
 styles.css              Themes, large-text mode, print checklist
 js/data.js + rules.js   U.S. engine (Claimable.screen) — unchanged public API
 js/countries/ca-*.js    Canada data + evaluators (CCB, OAS, GIS, CDB, CDCP)
 js/countries/mx-*.js    Mexico data + evaluators (pensiones, becas, JCF)
 js/countries.js         Dispatcher by country
 js/i18n.js              EN / FR / ES UI strings
-js/app.js               Form I/O, demos, render, read-aloud
+js/auth.js              Optional MojoAuth sign-in (OIDC + PKCE) + per-user saved checklists
+js/config.js            Site settings (OIDC issuer + client ID, both public)
+js/app.js               Form I/O, demos, render, read-aloud, save/sign-in UI
+auth/callback/          OIDC redirect page
 tests/                  Node built-in test runner
 ```
 
 **Design decisions**
 - **Deterministic rules, no AI deciding eligibility.** Every result comes from plain code with a written reason.
-- **Private by design.** Nothing is sent anywhere — no backend, accounts, or analytics.
+- **Private by design.** Household answers are never sent to a backend. Optional sign-in only stores a checklist in this browser.
 - **Country-native catalogs.** Canada and Mexico use their own federal programs, not copies of SNAP/Medicaid IDs.
 - **Accessible.** Phone-first layout, keyboard navigation, large-text toggle, localized read-aloud, printable checklist.
 
@@ -59,6 +88,7 @@ tests/                  Node built-in test runner
 - We do **not** collect SIN, CURP, bank, or ID numbers. Those belong on the agency checklist.
 - Exact payment is not guaranteed. Where formulas are incomplete or household-specific, we show eligibility plus “agency calculates.”
 - No live agency APIs, auto-apply, or scraped registration calendars — availability is a maintained label (`open` / `continuous` / `unknown`).
+- Saved checklists live in one browser. They don't sync across devices.
 - U.S. path still uses federal rules; many states have higher limits or extra programs. Call **211** for local help.
 - Immigration-status modeling is limited to the questions each country’s published rules require.
 - Rules data needs periodic updates (`js/data.js`, `js/countries/*-data.js`).

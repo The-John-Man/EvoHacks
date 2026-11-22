@@ -22,6 +22,11 @@
             <option value="es">Español</option>
           </select>
         </label>
+        <span class="account" id="account" hidden>
+          <span class="account-email" id="account-email"></span>
+          <button type="button" class="tool tool-text" id="sign-out">Sign out</button>
+        </span>
+        <button type="button" class="tool tool-text" id="sign-in" hidden>Sign in</button>
         <button type="button" class="tool" id="text-size" aria-pressed="false" title="Larger text" data-i18n-title="textSize">A+</button>
       </div>
     </div>
@@ -34,7 +39,7 @@
       <h1 id="intro-title" data-i18n="introTitle">Are you leaving money on the table?</h1>
       <p class="lead" id="intro-lead">Billions of dollars in food, tax credits, health coverage, and utility help go unclaimed every year. Answer a few questions and we'll check <strong>20 U.S. federal programs</strong> for you.</p>
       <ul class="trust">
-        <li data-i18n="trustPrivate"><strong>Private.</strong> Nothing you type leaves this device. No account, no tracking.</li>
+        <li data-i18n="trustPrivate"><strong>Private.</strong> Nothing you type leaves this device. No account required, no tracking.</li>
         <li data-i18n="trustClear"><strong>Clear.</strong> We show exactly why you may qualify, using published official rules.</li>
         <li data-i18n="trustUseful"><strong>Useful.</strong> You get a checklist of what to bring and where to apply.</li>
       </ul>
@@ -49,6 +54,10 @@
         <p class="hint small" id="coverage-note"></p>
       </div>
 
+      <div class="welcome-back" id="welcome-back" hidden>
+        <p><strong>Welcome back.</strong> You saved a checklist on <span id="saved-date"></span>.</p>
+        <button type="button" class="btn btn-primary" id="open-saved">Open my saved checklist</button>
+      </div>
       <button type="button" class="btn btn-primary btn-lg" id="start" data-i18n="start">Check my benefits</button>
       <details class="demo">
         <summary data-i18n="demoSummary">Try an example household</summary>
@@ -81,6 +90,21 @@
           </ul>
         </section>
       </details>
+    </section>
+
+    <!-- Sign in (optional) -->
+    <section id="view-signin" class="view" hidden aria-labelledby="signin-title">
+      <h1 id="signin-title">Sign in to save your checklist</h1>
+      <p class="lead">No password needed. You'll go to our secure login partner, MojoAuth, enter your email, and type in the code they send you. Then you'll come right back here.</p>
+      <ul class="trust">
+        <li><strong>What's shared:</strong> only your email, with MojoAuth, to send the code.</li>
+        <li><strong>What stays here:</strong> your household answers are saved in this browser only, never on a server.</li>
+      </ul>
+      <div class="signin-actions">
+        <button type="button" class="btn btn-primary btn-lg" id="signin-go">Continue to sign in</button>
+        <button type="button" class="btn btn-ghost" id="signin-cancel">Continue without an account</button>
+      </div>
+      <p class="error" id="signin-error" role="alert" hidden></p>
     </section>
 
     <!-- Wizard -->
@@ -299,7 +323,7 @@
           <button type="submit" class="btn btn-primary" id="next" data-i18n="next">Next</button>
         </div>
       </form>
-      <p class="privacy-note" data-i18n="privacyNote">🔒 Your answers stay in this browser tab. Close it and they're gone.</p>
+      <p class="privacy-note" data-i18n="privacyNote">🔒 Your answers stay in this browser. They're only kept if you sign in and choose "Save my checklist."</p>
     </section>
 
     <!-- Results -->
@@ -311,10 +335,12 @@
       </div>
 
       <div class="actions no-print">
+        <button type="button" class="btn btn-primary" id="save" hidden>Save my checklist</button>
         <button type="button" class="btn btn-primary" id="print" data-i18n="print">Print my checklist</button>
         <button type="button" class="btn btn-ghost" id="read" data-i18n="read">🔊 Read results aloud</button>
         <button type="button" class="btn btn-ghost" id="edit" data-i18n="edit">Change answers</button>
       </div>
+      <p class="save-status" id="save-status" role="status" hidden></p>
 
       <div class="filters no-print" role="tablist" aria-label="Filter results">
         <button type="button" role="tab" class="chip" data-filter="all" aria-selected="true" data-i18n="filterAll">All matches</button>
@@ -347,6 +373,7 @@
         <h2 data-i18n="howTitle">How this works</h2>
         <p id="disclaimer-body"></p>
         <p class="small"><span data-i18n="rulesUpdated">Rules last updated:</span> <span id="as-of"></span>. Every program card links to its official source.</p>
+        <p class="small" id="delete-saved-wrap" hidden><button type="button" class="linklike" id="delete-saved">Delete my saved checklist from this device</button></p>
       </aside>
     </section>
   </main>
@@ -355,6 +382,7 @@
     <p><span data-i18n="footer">Built for EvoHacks II · Not affiliated with any government agency</span> · <a href="https://www.usa.gov/benefits" rel="noopener">USA.gov</a> · <a href="https://www.canada.ca/en/services/benefits/finder.html" rel="noopener">Canada Benefits Finder</a> · <a href="https://www.programasparaelbienestar.gob.mx/" rel="noopener">Bienestar</a></p>
   </footer>
 
+  <script src="js/config.js"></script>
   <script src="js/data.js"></script>
   <script src="js/rules.js"></script>
   <script src="js/countries/ca-data.js"></script>
@@ -363,6 +391,7 @@
   <script src="js/countries/mx-rules.js"></script>
   <script src="js/countries.js"></script>
   <script src="js/i18n.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
