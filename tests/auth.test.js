@@ -1,4 +1,3 @@
-// Run with:  node --test tests/rules.test.js tests/auth.test.js
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const A = require("../js/auth.js");
@@ -12,7 +11,6 @@ function fakeStorage() {
   };
 }
 
-// Shape of an oidc-client-ts User after signinRedirectCallback()
 const oidcUser = {
   id_token: "eyJ...",
   access_token: "at",
@@ -33,8 +31,8 @@ test("sessionFromOidcUser keeps only the user id, email, and an expiry", () => {
 test("sessionFromOidcUser rejects missing or partial users", () => {
   assert.equal(A.sessionFromOidcUser(null), null);
   assert.equal(A.sessionFromOidcUser("nope"), null);
-  assert.equal(A.sessionFromOidcUser({ id_token: "t", profile: {} }), null); // no sub
-  assert.equal(A.sessionFromOidcUser({ profile: { sub: "x" } }), null); // no ID token
+  assert.equal(A.sessionFromOidcUser({ id_token: "t", profile: {} }), null);
+  assert.equal(A.sessionFromOidcUser({ profile: { sub: "x" } }), null);
   const noEmail = A.sessionFromOidcUser({ id_token: "t", profile: { sub: "x" } });
   assert.equal(noEmail.email, "");
 });
@@ -90,6 +88,7 @@ test("blocked, missing, or corrupted storage never throws", () => {
   assert.equal(store.saveResults("x", {}), false);
   assert.doesNotThrow(() => store.clearSession());
   assert.equal(A.makeStore(null).loadResults("x"), null);
+  assert.equal(A.makeStore(null).saveResults("x", {}), false);
   const s = fakeStorage();
   s.setItem(A.SESSION_KEY, "{not json");
   assert.equal(A.makeStore(s).getSession(), null);

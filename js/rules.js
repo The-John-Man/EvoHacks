@@ -1,16 +1,3 @@
-/*
- * Claimable — eligibility rules engine.
- *
- * Design rule: every decision here is plain, testable code with a written reason.
- * No AI makes eligibility calls. Results are screening estimates, not official decisions:
- * the agency that runs each program makes the final call.
- *
- * Statuses:
- *   enrolled  – household says it already gets this
- *   likely    – meets the main federal test we can check
- *   maybe     – close to the line, or the rule depends on the state; worth checking
- *   unlikely  – does not meet the main test (shown so users can see why)
- */
 (function (root) {
   "use strict";
 
@@ -19,7 +6,6 @@
   const money = (n) => "$" + Math.round(n).toLocaleString("en-US");
   const pctStr = (n) => Math.round(n) + "%";
 
-  /** Turn raw form answers into the numbers every rule needs. */
   function buildContext(h) {
     const children = (h.children || []).filter((a) => Number.isFinite(a) && a >= 0);
     const adults = Math.max(1, h.adults || 1);
@@ -55,7 +41,6 @@
       elderlyOrDisabled: (h.seniors || 0) > 0 || !!h.disabled,
       expansion: !D.nonExpansionStates.includes(h.state),
       enrolled,
-      // "Categorical" eligibility: already on a means-tested program that other programs accept as proof.
       onSnap: !!enrolled.snap,
       onMedicaid: !!enrolled.medicaid,
       onTanf: !!enrolled.tanf,
@@ -63,9 +48,6 @@
     };
   }
 
-  // ---------- Calculators (pure functions, unit tested) ----------
-
-  /** Estimated monthly SNAP benefit (simplified federal formula, 48 states + DC). */
   function snapMonthly(ctx) {
     const S = D.snap;
     const n = ctx.size;
@@ -83,15 +65,14 @@
     return { benefit: Math.round(benefit), net: Math.round(net), maxA };
   }
 
-  /** Estimated Earned Income Tax Credit for tax year 2026. */
   function eitcAmount(ctx) {
     const E = D.eitc;
     if (ctx.h.investmentOver) return 0;
     const kids = Math.min(3, ctx.kidsUnder19);
-    if (kids === 0 && !ctx.h.adultWorkingAge) return 0; // no-child EITC requires age 25–64
+    if (kids === 0 && !ctx.h.adultWorkingAge) return 0;
     const p = E.byKids[kids];
     const earned = ctx.earnedAnnual;
-    const agi = ctx.earnedAnnual + ctx.otherMonthly * 12; // rough AGI: treats other income as taxable
+    const agi = ctx.earnedAnnual + ctx.otherMonthly * 12;
     let credit = Math.min(p.max, earned * p.phaseInRate);
     const start = p.phaseOutStart + (ctx.h.married ? E.marriedBump : 0);
     const income = Math.max(agi, earned);
@@ -99,7 +80,6 @@
     return Math.max(0, Math.round(credit));
   }
 
-  /** Refundable part of the Child Tax Credit (what a family gets even if they owe no tax). */
   function ctcRefundable(ctx) {
     const C = D.ctc;
     const k = ctx.kidsUnder17;
@@ -107,8 +87,6 @@
     const byEarnings = Math.max(0, (ctx.earnedAnnual - C.earnedThreshold) * C.phaseInRate);
     return Math.round(Math.min(k * C.refundablePerChild, byEarnings));
   }
-
-  // ---------- Program definitions ----------
 
   const PROGRAMS = [
     {
@@ -486,7 +464,6 @@
         if (ctx.onSsi) return { status: "enrolled" };
         if (!ctx.elderlyOrDisabled) return { status: "unlikely", reasons: ["SSI is for people 65+ or with a disability."] };
         const fbr = D.ssi.individual;
-        // Unearned income over $20 and half of earnings over $65 reduce SSI dollar for dollar.
         const countable = Math.max(0, ctx.otherMonthly - 20) + Math.max(0, (ctx.earnedMonthly - 65) / 2);
         const est = Math.max(0, fbr - countable);
         const reasons = [
@@ -532,7 +509,6 @@
 
   const ORDER = { likely: 0, maybe: 1, enrolled: 2, unlikely: 3 };
 
-  /** Screen a household against every program. */
   function screen(household) {
     const ctx = buildContext(household);
     const results = PROGRAMS.map((p) => {

@@ -1,29 +1,14 @@
-/*
- * Claimable — "how long until help arrives" for each program.
- *
- * Every estimate is labeled by how solid it is:
- *   law       – a federal deadline the agency must meet (it can still run late)
- *   calendar  – fixed by dates (tax season, open enrollment, summer)
- *   average   – a published national average
- *   typical   – common practice; varies a lot by state or provider
- *
- * Estimates are personalized from the household answers where the rules allow
- * (expedited SNAP, WIC priority, LIHEAP crisis, disability-based Medicaid, etc.)
- * and from today's date for calendar-based programs.
- */
 (function (root) {
   "use strict";
 
   const Rules = root.Claimable || (typeof require !== "undefined" ? require("./rules.js") : null);
   const DAY = 24 * 3600 * 1000;
 
-  // ---------- Date helpers ----------
   const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const daysUntil = (today, date) => Math.max(0, Math.round((startOfDay(date) - startOfDay(today)) / DAY));
   const fmtDate = (d) => d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
   const fmtMonth = (d) => d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
-  /** Bucket by the upper end of the typical wait. */
   function bucketOf(maxDays) {
     if (maxDays <= 7) return "week";
     if (maxDays <= 31) return "month";
@@ -38,15 +23,11 @@
     longer: "More than 3 months",
   };
 
-  // ---------- Calendar logic (pure, testable) ----------
-
-  /** Tax refunds with EITC/ACTC: held by law until mid-February; most arrive by early March. */
   function taxRefundWindow(today) {
     const y = today.getFullYear();
-    const m = today.getMonth(); // 0 = Jan
-    // From late spring through December, the next chance is next year's filing season.
+    const m = today.getMonth();
     if (m >= 4) {
-      const early = new Date(y + 1, 2, 1); // ~March 1
+      const early = new Date(y + 1, 2, 1);
       const late = new Date(y + 1, 2, 15);
       return { early, late, label: `Early March ${y + 1}`, note: `File as soon as the ${y + 1} tax season opens (late January) and choose direct deposit. By law (the PATH Act), refunds that include these credits are held until mid-February. Most arrive by early March.` };
     }
@@ -57,7 +38,6 @@
     return { early: new Date(today.getTime() + 21 * DAY), late: new Date(today.getTime() + 42 * DAY), label: "About 3–6 weeks after you file", note: "The IRS issues most e-filed refunds within 21 days. Paper returns take longer." };
   }
 
-  /** HealthCare.gov open enrollment: Nov 1 – Jan 15 (enroll by Dec 15 for Jan 1). */
   function marketplaceStart(today) {
     const y = today.getFullYear();
     const m = today.getMonth();
@@ -73,7 +53,6 @@
     return { start: nextMonth, inOpenEnrollment: false, note: "Outside open enrollment (Nov 1 – Jan 15) you need a qualifying life event, such as losing other coverage, moving, or having a baby. Coverage usually starts the first of the next month." };
   }
 
-  /** SUN Bucks are issued in summer. */
   function nextSummer(today) {
     const y = today.getFullYear();
     const june = new Date(y, 5, 1);
@@ -82,8 +61,6 @@
     if (today < sept) return { start: today, end: new Date(y, 7, 31) };
     return { start: new Date(y + 1, 5, 1), end: new Date(y + 1, 7, 31) };
   }
-
-  // ---------- Per-program estimates ----------
 
   const S = {
     snapRule: { label: "7 CFR 273.2 (30-day and 7-day expedited rules)", url: "https://www.ecfr.gov/current/title-7/subtitle-B/chapter-II/subchapter-C/part-273/section-273.2" },
@@ -378,10 +355,6 @@
     };
   }
 
-  /**
-   * Attach a timing estimate to each likely/maybe result.
-   * results: from Claimable.screen(). household: the same answers. today: a Date.
-   */
   function addTiming(results, household, today = new Date()) {
     const ctx = Rules.buildContext(household);
     return results.map((r) => {
@@ -400,17 +373,6 @@
     unknown: "Processing time not researched yet",
   };
 
-  // ======================================================================
-  // Per-program application timelines
-  // ======================================================================
-  //
-  // Each plan turns an application date A into dated steps:
-  //   you     – something you need to do or send
-  //   agency  – something the office does (interview, review, decision)
-  //   aid     – when the help itself arrives
-  //   renewal – when you'll need to renew or report again
-  // If you haven't applied yet, A = today and every date is "if you apply today".
-
   const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
   const toISO = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   function parseISO(s) {
@@ -420,14 +382,11 @@
     return isNaN(d) ? null : d;
   }
 
-  /** A step whose window is A+from .. A+to days. */
   const rel = (A, key, kind, title, detail, from, to = from) => ({ key, kind, title, detail, from: addDays(A, from), to: addDays(A, to) });
-  /** A step on fixed calendar dates. */
   const abs = (key, kind, title, detail, from, to = from) => ({ key, kind, title, detail, from, to });
 
   const applyStep = (A, title, detail) => rel(A, "apply", "you", title || "Apply", detail || "Your application date. Keep a copy or screenshot of what you sent.", 0);
 
-  /** Refund timing for a return filed on `filed` that claims EITC/ACTC. */
   function refundAfterFiling(filed) {
     const holdEnds = new Date(filed.getFullYear(), 1, 15);
     if (filed.getMonth() <= 1 && filed < holdEnds) {
@@ -436,20 +395,19 @@
     return { from: addDays(filed, 21), to: addDays(filed, 42) };
   }
 
-  /** Next tax-season opening (about January 26) on or after `today`. */
   function seasonOpens(today) {
     const y = today.getMonth() >= 4 ? today.getFullYear() + 1 : today.getFullYear();
     return new Date(y, 0, 26);
   }
 
-  function taxPlan(ctx, A, today, applied, label) {
+  function taxPlan(A, today, applied, label) {
     const steps = [];
     if (!applied) {
       const opens = seasonOpens(today);
       const prep = today < opens;
       steps.push(abs("gather", "you", "Gather your tax papers",
         "W-2s and 1099s (sent by January 31), Social Security cards for everyone on the return, and last year's return if you have it.",
-        prep ? today : today, prep ? addDays(opens, -1) : today));
+        today, prep ? addDays(opens, -1) : today));
       steps.push(abs("file", "you", `File your return to claim the ${label}`,
         "Use free VITA tax help and choose direct deposit. Filing is the \"application\"; enter the date you file above.",
         today < opens ? opens : today, today < opens ? addDays(opens, 21) : addDays(today, 14)));
@@ -501,10 +459,10 @@
         abs("aid", "aid", "SUN Bucks card or deposit", "$120 per child, paid once during summer break.", s.start, s.end),
       ];
     },
-    eitc(ctx, A, today, est, applied) { return taxPlan(ctx, A, today, applied, "EITC"); },
-    ctc(ctx, A, today, est, applied) { return taxPlan(ctx, A, today, applied, "Child Tax Credit"); },
-    "medicaid-adult"(ctx, A, today, est) { return medicaidPlan(ctx, A, today, est, true); },
-    "medicaid-kids"(ctx, A, today, est) { return medicaidPlan(ctx, A, today, est, false); },
+    eitc(ctx, A, today, est, applied) { return taxPlan(A, today, applied, "EITC"); },
+    ctc(ctx, A, today, est, applied) { return taxPlan(A, today, applied, "Child Tax Credit"); },
+    "medicaid-adult"(ctx, A, today, est) { return medicaidPlan(ctx, A, est, true); },
+    "medicaid-kids"(ctx, A, today, est) { return medicaidPlan(ctx, A, est, false); },
     marketplace(ctx, A, today) {
       const m = marketplaceStart(A);
       const y = m.start.getFullYear();
@@ -614,14 +572,13 @@
     },
   };
 
-  function medicaidPlan(ctx, A, today, est, adult) {
+  function medicaidPlan(ctx, A, est, adult) {
     const steps = [
       applyStep(A, adult ? "Apply for Medicaid" : "Apply for Medicaid / CHIP for your kids", "Coverage can start in the month you apply, and may be backdated for recent bills."),
       rel(A, "docs", "you", "Answer any request for documents", "Read every letter. Missing a deadline is a common reason for denial.", 7, 30),
       rel(A, "aid", "aid", "Decision and coverage", est.maxDays > 45 ? "Disability-based applications can take up to 90 days." : "Required within 45 days.", est.minDays, est.maxDays),
     ];
     const jan2027 = new Date(2027, 0, 1);
-    // H.R. 1 work reporting: expansion adults 19–64, with exemptions (pregnancy, disability, parents of kids 13 and under, others).
     const workRule = adult && ctx.expansion && !ctx.h.pregnant && !ctx.hasDisabled && !ctx.hasSenior &&
       !ctx.children.some((a) => a <= 13);
     if (workRule) {
@@ -640,15 +597,6 @@
 
   const DONE_LABEL = { you: "Done", agency: "Happened", aid: "Received", renewal: "Done" };
 
-  /**
-   * The timeline for one program.
-   * tracking: { appliedOn: "YYYY-MM-DD"|null, done: {stepKey: true}, notes: [{date, text}] }
-   * Returns { estimated, applied, items (steps + notes, sorted by date), arrival, next }.
-   */
-  /**
-   * Fallback for programs without researched timing (e.g. Canada and Mexico for now):
-   * the same tracker, but only the application date is dated. We don't invent dates.
-   */
   function genericPlan(A, source) {
     return {
       summary: {
@@ -690,7 +638,7 @@
       if (s.key === "apply") status = applied ? "done" : "now";
       else if (done[s.key]) status = "done";
       else if (!applied) status = "planned";
-      else if (!s.to) status = "upcoming"; // undated step
+      else if (!s.to) status = "upcoming";
       else if (s.to < day) status = s.kind === "you" ? "overdue" : s.kind === "renewal" ? "now" : "late";
       else if (s.from <= day) status = "now";
       else status = "upcoming";
@@ -701,7 +649,6 @@
       .map((n, i) => ({ type: "note", index: i, date: parseISO(n.date) || day, text: String(n.text || "") }))
       .filter((n) => n.text.trim());
 
-    // Undated steps keep their place right after the previous dated step.
     let lastDate = A;
     const stepItems = steps.map((s, i) => {
       if (s.from) lastDate = s.from;

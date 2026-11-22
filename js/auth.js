@@ -1,19 +1,3 @@
-/*
- * Claimable — optional sign-in with MojoAuth over OpenID Connect.
- *
- * Flow: authorization code + PKCE (S256) + state, public client (no client secret;
- * the token request authenticates with client_id only). Implemented with the standard
- * browser OIDC library, oidc-client-ts, which validates the ID token's signature,
- * issuer, audience, and nonce.
- *
- * Why login exists: so people can save their benefits checklist and come back to it
- * (for example after gathering documents). The screener itself never requires an account.
- *
- * Privacy: MojoAuth only sees the email address used to sign in. Household answers are
- * saved in this browser only, under the signed-in user's ID, and never sent to a server.
- * OIDC tokens are kept in sessionStorage for this tab only (cleared when the tab closes);
- * they're used only to sign out of MojoAuth as well.
- */
 (function (root) {
   "use strict";
 
@@ -24,55 +8,70 @@
   const OIDC_LIB = "https://cdn.jsdelivr.net/npm/oidc-client-ts@3.1.0/dist/browser/oidc-client-ts.min.js";
   const SCOPES = "openid profile email";
 
-  // ---------- Pure helpers (unit tested in Node) ----------
-
-  /** Turn an oidc-client-ts User into our local session. Returns null unless it's a real sign-in. */
   function sessionFromOidcUser(user, now = Date.now()) {
-    if (!user || typeof user !== "object") return null;
-    const p = user.profile || {};
-    if (!p.sub || !user.id_token) return null;
-    return { userId: String(p.sub), email: p.email ? String(p.email) : "", expiresAt: now + SESSION_HOURS * 3600 * 1000 };
+    if (typeof user !== "object" || !user?.profile?.sub || !user.id_token) return null;
+    return {
+      userId: String(user.profile.sub),
+      email: user.profile.email ? String(user.profile.email) : "",
+      expiresAt: now + SESSION_HOURS * 3600 * 1000,
+    };
   }
 
-  /** The folder the app is served from, e.g. "/" locally or "/EvoHacks/" on GitHub Pages. */
   function appBase(pathname) {
-    let p = String(pathname || "/");
-    const i = p.indexOf("/auth/callback");
-    if (i >= 0) p = p.slice(0, i + 1);
-    else p = p.replace(/[^/]*$/, ""); // drop a trailing file name like index.html
-    return p.startsWith("/") ? p : "/" + p;
+    const path = String(pathname || "/");
+    const callback = path.indexOf("/auth/callback");
+    const base = callback >= 0 ? path.slice(0, callback + 1) : path.replace(/[^/]*$/, "");
+    return base.startsWith("/") ? base : "/" + base;
   }
 
-  /** Build the oidc-client-ts settings for a site at origin + base. */
   function oidcSettings(cfg, origin, base) {
     return {
       authority: cfg.oidcIssuer,
       client_id: cfg.oidcClientId,
       redirect_uri: origin + base + "auth/callback",
       post_logout_redirect_uri: origin + base,
-      response_type: "code", // authorization code flow; oidc-client-ts adds PKCE (S256) and state
+      response_type: "code",
       scope: SCOPES,
-      loadUserInfo: false, // email comes from the ID token (scope "email")
+      loadUserInfo: false,
       automaticSilentRenew: false,
     };
   }
 
-  /** Wraps a Storage object (localStorage, or a fake in tests); never throws. */
   function makeStore(storage) {
-    const get = (k) => { try { const v = storage && storage.getItem(k); return v ? JSON.parse(v) : null; } catch (_) { return null; } };
-    const set = (k, v) => { try { storage && storage.setItem(k, JSON.stringify(v)); return true; } catch (_) { return false; } };
-    const del = (k) => { try { storage && storage.removeItem(k); } catch (_) { /* ignore */ } };
+    function get(key) {
+      try {
+        return JSON.parse(storage.getItem(key));
+      } catch {
+        return null;
+      }
+    }
+
+    function set(key, value) {
+      try {
+        storage.setItem(key, JSON.stringify(value));
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    function remove(key) {
+      try { storage.removeItem(key); } catch {}
+    }
+
     return {
       getSession(now = Date.now()) {
-        const s = get(SESSION_KEY);
-        if (!s || !s.userId || !(s.expiresAt > now)) return null;
-        return s;
+        const session = get(SESSION_KEY);
+        return session?.userId && session.expiresAt > now ? session : null;
       },
-      setSession(s) { return set(SESSION_KEY, s); },
-      clearSession() { del(SESSION_KEY); },
+      setSession(session) { return set(SESSION_KEY, session); },
+      clearSession() { remove(SESSION_KEY); },
       saveResults(userId, answers, now = Date.now()) { return set(SAVED_PREFIX + userId, { answers, savedAt: now }); },
       loadResults(userId) { return get(SAVED_PREFIX + userId); },
-      deleteResults(userId) { del(SAVED_PREFIX + userId); del(TRACK_PREFIX + userId); },
+      deleteResults(userId) {
+        remove(SAVED_PREFIX + userId);
+        remove(TRACK_PREFIX + userId);
+      },
       saveTracking(userId, tracking) { return set(TRACK_PREFIX + userId, tracking || {}); },
       loadTracking(userId) { return get(TRACK_PREFIX + userId) || {}; },
     };
@@ -82,12 +81,10 @@
   root.ClaimableAuthCore = AuthCore;
   if (typeof module !== "undefined" && module.exports) { module.exports = AuthCore; return; }
 
-  // ---------- Browser: OIDC with oidc-client-ts ----------
-
   const cfg = root.CLAIMABLE_CONFIG || {};
   const enabled = !!((cfg.oidcIssuer || "").trim() && (cfg.oidcClientId || "").trim());
   let storage = null;
-  try { storage = root.localStorage; } catch (_) { storage = null; }
+  try { storage = root.localStorage; } catch {}
   const store = makeStore(storage);
   const base = appBase(root.location.pathname);
   const listeners = [];
@@ -95,14 +92,17 @@
   let mgr = null;
 
   function loadLib() {
-    if (root.oidc && root.oidc.UserManager) return Promise.resolve();
+    if (root.oidc?.UserManager) return Promise.resolve();
     if (libPromise) return libPromise;
     libPromise = new Promise((resolve, reject) => {
-      const s = document.createElement("script");
-      s.src = OIDC_LIB;
-      s.onload = () => (root.oidc && root.oidc.UserManager ? resolve() : reject(new Error("Sign-in library didn't load.")));
-      s.onerror = () => { libPromise = null; reject(new Error("Couldn't reach the sign-in service. Check your connection.")); };
-      document.head.appendChild(s);
+      const script = document.createElement("script");
+      script.src = OIDC_LIB;
+      script.onload = () => root.oidc?.UserManager ? resolve() : reject(new Error("Sign-in library didn't load."));
+      script.onerror = () => {
+        libPromise = null;
+        reject(new Error("Couldn't reach the sign-in service. Check your connection."));
+      };
+      document.head.appendChild(script);
     });
     return libPromise;
   }
@@ -124,34 +124,33 @@
     onChange(fn) { listeners.push(fn); },
     _emit() { listeners.forEach((fn) => fn(Auth.user())); },
 
-    /**
-     * Send the user to MojoAuth's hosted login page.
-     * intent.save + intent.answers: save this checklist as soon as they come back signed in.
-     */
     async startSignIn(intent) {
       if (!enabled) throw new Error("Sign-in isn't set up on this site.");
       const m = await manager();
       await m.signinRedirect({ state: intent || {} });
     },
 
-    /** Runs on /auth/callback: exchange the code (with the PKCE verifier) and start our session. */
     async completeSignIn() {
       const m = await manager();
       const oidcUser = await m.signinRedirectCallback();
       const session = sessionFromOidcUser(oidcUser);
       if (!session) throw new Error("Sign-in didn't return a valid user.");
-      store.setSession(session);
+      if (!store.setSession(session)) {
+        throw Object.assign(new Error("Your browser could not keep the sign-in session."), { code: "session_storage_unavailable" });
+      }
       const intent = oidcUser.state || {};
       let saved = false;
-      if (intent.save && intent.answers) saved = store.saveResults(session.userId, intent.answers);
+      if (intent.save && intent.answers) {
+        saved = store.saveResults(session.userId, intent.answers);
+        if (!saved) throw Object.assign(new Error("Your checklist could not be saved."), { code: "checklist_storage_unavailable" });
+      }
       if (intent.tracking && typeof intent.tracking === "object") {
-        // Merge timelines started before signing in with any already saved for this user.
-        store.saveTracking(session.userId, { ...store.loadTracking(session.userId), ...intent.tracking });
+        const recorded = store.saveTracking(session.userId, { ...store.loadTracking(session.userId), ...intent.tracking });
+        if (!recorded) throw Object.assign(new Error("Your timeline could not be saved."), { code: "checklist_storage_unavailable" });
       }
       return { session, saved };
     },
 
-    /** Clear the local session; also end the MojoAuth session if this tab still has the ID token. */
     async signOut() {
       store.clearSession();
       Auth._emit();
@@ -161,7 +160,7 @@
         const u = await m.getUser();
         if (u && u.id_token) { await m.signoutRedirect({ id_token_hint: u.id_token }); return; }
         await m.removeUser();
-      } catch (_) { /* local sign-out already happened */ }
+      } catch {}
     },
 
     save(answers) {
@@ -187,5 +186,12 @@
     },
   };
 
+  root.addEventListener("storage", (event) => {
+    if (event.storageArea !== storage) return;
+    const user = Auth.user();
+    if (event.key === null || event.key === SESSION_KEY || (user && event.key === SAVED_PREFIX + user.userId)) {
+      Auth._emit();
+    }
+  });
   root.ClaimableAuth = Auth;
 })(typeof window !== "undefined" ? window : globalThis);

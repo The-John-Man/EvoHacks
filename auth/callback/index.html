@@ -35,7 +35,7 @@
       try {
         i18n.setLang(localStorage.getItem("claimable-lang"));
         document.documentElement.classList.toggle("large", localStorage.getItem("claimable-large") === "1");
-      } catch (_) { /* Browser storage may be unavailable. */ }
+      } catch {}
       document.documentElement.lang = i18n.getLang();
       var msg = document.getElementById("msg");
       var detail = document.getElementById("detail");
@@ -46,20 +46,23 @@
       document.title = msg.textContent + " · Claimable";
       backLink.href = home;
       backLink.textContent = i18n.t("authBack");
-      function fail(text) {
-        msg.textContent = i18n.t("authIncomplete");
+      function fail(text, heading) {
+        msg.textContent = i18n.t(heading || "authIncomplete");
         detail.textContent = text;
         document.title = msg.textContent + " · Claimable";
         document.getElementById("home-wrap").hidden = false;
       }
       var params = new URLSearchParams(location.search);
       if (params.get("error")) {
-        // e.g. the user cancelled on MojoAuth's page
         return fail(params.get("error_description") || i18n.t("authCancelled"));
       }
       Auth.completeSignIn()
         .then(function (r) { location.replace(home + (r.saved ? "#saved" : "#signed-in")); })
-        .catch(function (e) { fail((e && e.message) || i18n.t("authRetry")); });
+        .catch(function (e) {
+          if (e && e.code === "checklist_storage_unavailable") return fail(i18n.t("authSaveFailed"), "authSaveIncomplete");
+          if (e && e.code === "session_storage_unavailable") return fail(i18n.t("authSessionStorage"));
+          fail((e && e.message) || i18n.t("authRetry"));
+        });
     })();
   </script>
 </body>

@@ -1,4 +1,3 @@
-/* Account views share a compact layout around the checklist and its privacy details. */
 #view-signin {
   max-width: 55rem;
   margin-inline: auto;
@@ -103,7 +102,6 @@
   border-inline-start-color: #ed967f;
 }
 
-.auth-callback { min-height: 100vh; }
 .auth-callback .topbar-inner { justify-content: flex-start; }
 .auth-callback-main {
   max-width: 36rem;
@@ -122,8 +120,4 @@
 @media (max-width: 30rem) {
   .auth-actions { flex-direction: column; }
   .auth-actions .btn { width: 100%; }
-}
-
-@media print {
-  #save-status { display: none; }
 }

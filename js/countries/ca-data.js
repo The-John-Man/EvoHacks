@@ -1,4 +1,3 @@
-/* Canada federal constants — sourced CRA / Service Canada figures. */
 (function (root) {
   "use strict";
 
@@ -12,8 +11,6 @@
       ["ON", "Ontario"], ["PE", "Prince Edward Island"], ["QC", "Quebec"],
       ["SK", "Saskatchewan"], ["YT", "Yukon"],
     ],
-    // Canada Child Benefit — July 2025 to June 2026 (2024 AFNI base year)
-    // Source: https://www.canada.ca/en/revenue-agency/services/child-family-benefits/canada-child-benefit/canada-child-benefit-ccb-calculation-sheet-july-2025-june-2026-payments-2024-tax-year.html
     ccb: {
       benefitYear: "July 2025 – June 2026",
       afniTaxYear: 2024,
@@ -21,7 +18,6 @@
       ages6to17: 6748,
       threshold1: 37487,
       threshold2: 81222,
-      // portion of AFNI between threshold1 and threshold2 / above threshold2
       phase1Rate: { 1: 0.07, 2: 0.135, 3: 0.19, 4: 0.23 },
       phase2Fixed: { 1: 3061, 2: 5904, 3: 8310, 4: 10059 },
       phase2Rate: { 1: 0.032, 2: 0.057, 3: 0.08, 4: 0.095 },
@@ -31,8 +27,6 @@
         effectivePeriod: "2025-07-01/2026-06-30",
       },
     },
-    // OAS / GIS — October to December 2025 quarterly maximums
-    // Source: https://www.canada.ca/en/employment-social-development/programs/pensions/pension/statistics/2025-quarterly-october-december.html
     oas: {
       monthly65to74: 740.09,
       monthly75plus: 814.1,
@@ -56,7 +50,6 @@
         effectivePeriod: "2025-10-01/2025-12-31",
       },
     },
-    // Canada Disability Benefit — eligibility screening; amount set by agency tables
     cdb: {
       maxMonthly: 200,
       note: "Payment amount depends on Disability Tax Credit approval and income; agency calculates exact entitlement.",
@@ -66,7 +59,6 @@
         effectivePeriod: "2025-07-01/2026-12-31",
       },
     },
-    // Canadian Dental Care Plan — income-based access screening
     cdcp: {
       incomeLimit: 90000,
       source: {

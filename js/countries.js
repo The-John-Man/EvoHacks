@@ -1,4 +1,3 @@
-/* Country dispatcher — routes screening; never sends CA/MX into U.S. rules. */
 (function (root) {
   "use strict";
 
@@ -44,7 +43,6 @@
     throw err;
   }
 
-  /** Test helper: true if this code would invoke Claimable.screen (U.S.). */
   function routesToUS(country) {
     return normalizeCountry(country) === "US";
   }

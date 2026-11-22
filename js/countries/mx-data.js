@@ -1,4 +1,3 @@
-/* Mexico federal Bienestar constants — sourced program pages / official notices. */
 (function (root) {
   "use strict";
 
@@ -16,8 +15,6 @@
       ["TAM", "Tamaulipas"], ["TLA", "Tlaxcala"], ["VER", "Veracruz"], ["YUC", "Yucatán"],
       ["ZAC", "Zacatecas"],
     ],
-    // Source: https://www.programasparaelbienestar.gob.mx/programas/adultos-mayores/pension-para-personas-adultas-mayores/
-    // 2026 amount confirmed via official payment calendar notice ($6,400 bimestral)
     pension65: {
       bimonthly: 6400,
       minAge: 65,

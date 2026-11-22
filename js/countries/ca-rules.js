@@ -1,4 +1,3 @@
-/* Canadian federal eligibility evaluators. */
 (function (root) {
   "use strict";
 
@@ -12,7 +11,6 @@
     return Math.min(4, Math.max(1, n));
   }
 
-  /** Annual CCB for July 2025–June 2026 using CRA calculation sheet. Shared custody → half. */
   function ccbAnnual(children, afni, sharedCustody) {
     const under18 = (children || []).filter((a) => Number.isFinite(a) && a >= 0 && a < 18);
     if (!under18.length) return { annual: 0, max: 0 };
@@ -208,7 +206,7 @@
             missingQuestions: ["afniAnnual"],
           };
         }
-        const income = ctx.afniAnnual; // reused field: other annual income for GIS screening
+        const income = ctx.afniAnnual;
         const cutoff = ctx.married ? D.gis.coupleBothOasCutoff : D.gis.singleCutoff;
         const maxM = ctx.married ? D.gis.coupleBothOasMaxMonthly : D.gis.singleMaxMonthly;
         if (income > cutoff) {
@@ -217,7 +215,6 @@
             reasons: [`Income around ${moneyCAD(income)} is above the published GIS cut-off near ${moneyCAD(cutoff)} (Oct–Dec 2025 table, excluding OAS).`],
           };
         }
-        // Rough linear phase-out: $1 GIS per $2 of other income (simplified)
         const estMonthly = Math.max(0, Math.round((maxM - income / 24) * 100) / 100);
         return {
           status: "likely",

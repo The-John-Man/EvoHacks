@@ -1,13 +1,8 @@
-// Run with: node --test tests/
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-// Load U.S. engine first so dispatcher can wrap it
-require("../js/data.js");
 const US = require("../js/rules.js");
-require("../js/countries/ca-data.js");
 const CA = require("../js/countries/ca-rules.js");
-require("../js/countries/mx-data.js");
 const MX = require("../js/countries/mx-rules.js");
 const Countries = require("../js/countries.js");
 
@@ -38,7 +33,6 @@ test("dispatcher US path still returns snap for Maria-like household", () => {
   const res = Countries.screen("US", h);
   assert.equal(res.country, "US");
   assert.equal(res.results.find((r) => r.id === "snap").status, "likely");
-  // Ensure we used the real U.S. engine
   assert.equal(US.screen(h).results.find((r) => r.id === "snap").status, "likely");
 });
 
@@ -52,7 +46,6 @@ test("Canada CCB: Aisha likely with estimate; age 18 child excluded", () => {
   const ccb = res.results.find((r) => r.id === "ca-ccb");
   assert.equal(ccb.status, "likely");
   assert.ok(ccb.annual > 10000);
-  // max: 7997 + 6748 = 14745 with no reduction under threshold
   assert.equal(ccb.annual, 14745);
 
   const adultChild = CA.screen({ ...h, children: [18] });

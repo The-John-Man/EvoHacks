@@ -1,4 +1,3 @@
-// Run with:  node --test tests/rules.test.js tests/auth.test.js tests/timing.test.js
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const C = require("../js/rules.js");
@@ -53,16 +52,13 @@ test("SUN Bucks arrive next summer", () => {
 });
 
 test("SNAP: 30 days normally, 7 days when expedited", () => {
-  // Maria: $2,100 income, $1,280 rent + utilities -> normal 30-day processing
   const maria = find(timed(base({ children: [3, 8], earnedMonthly: 2100, rentMonthly: 1100, utilitiesMonthly: 180 })), "snap");
   assert.equal(maria.timing.maxDays, 30);
   assert.equal(maria.timing.bucket, "month");
   assert.equal(maria.timing.basis, "law");
-  // No income -> expedited
   const none = find(timed(base({ rentMonthly: 600 })), "snap");
   assert.equal(none.timing.maxDays, 7);
   assert.equal(none.timing.bucket, "week");
-  // Rent + utilities above income -> expedited
   const rentHeavy = find(timed(base({ earnedMonthly: 900, rentMonthly: 850, utilitiesMonthly: 120 })), "snap");
   assert.equal(rentHeavy.timing.maxDays, 7);
 });
@@ -78,7 +74,7 @@ test("LIHEAP crisis help within 48 hours when behind on bills", () => {
   assert.equal(crisis.timing.maxDays, 2);
   assert.equal(crisis.timing.bucket, "week");
   const regular = find(timed(base({ earnedMonthly: 1000 })), "liheap");
-  assert.equal(regular.timing.bucket, "quarter"); // "2–8 weeks": grouped by its upper end
+  assert.equal(regular.timing.bucket, "quarter");
 });
 
 test("Medicaid: 45 days, 90 with a disability, and the 2027 retroactive warning", () => {
@@ -97,19 +93,17 @@ test("tax credits for Maria land in early March 2027", () => {
   const eitc = find(rs, "eitc");
   assert.equal(eitc.timing.label, "Early March 2027");
   assert.equal(eitc.timing.bucket, "longer");
-  assert.equal(eitc.timing.minDays, 100); // Nov 21, 2026 -> Mar 1, 2027
+  assert.equal(eitc.timing.minDays, 100);
 });
 
 test("only likely/maybe results get timing", () => {
   const rs = timed(base({ children: [2], earnedMonthly: 1500, enrolled: { snap: true } }));
-  assert.equal(find(rs, "snap").timing, null); // enrolled
+  assert.equal(find(rs, "snap").timing, null);
   for (const r of rs) {
     if (r.status === "unlikely" || r.status === "enrolled") assert.equal(r.timing, null, r.id);
     else assert.ok(r.timing && Number.isFinite(r.timing.maxDays) && r.timing.label, r.id);
   }
 });
-
-// ---------- Per-program application timelines ----------
 
 const NOV_22_2026 = new Date(2026, 10, 22);
 const maria = base({ children: [3, 8], earnedMonthly: 2100, rentMonthly: 1100, utilitiesMonthly: 180 });
@@ -124,16 +118,16 @@ test("before applying: dates are estimates from today", () => {
   assert.equal(tl.estimated, true);
   assert.equal(stepOf(tl, "apply").status, "now");
   assert.ok(tl.steps.filter((s) => s.key !== "apply").every((s) => s.status === "planned"));
-  assert.ok(sameDay(tl.arrival.to, new Date(2026, 11, 22))); // today + 30 days
+  assert.ok(sameDay(tl.arrival.to, new Date(2026, 11, 22)));
 });
 
 test("after applying: statuses follow the calendar", () => {
   const tl = T.buildTimeline("snap", maria, { appliedOn: "2026-11-01" }, NOV_22_2026);
   assert.equal(tl.estimated, false);
   assert.equal(stepOf(tl, "apply").status, "done");
-  assert.equal(stepOf(tl, "interview").status, "late");     // Nov 4–15 has passed, not marked
-  assert.equal(stepOf(tl, "docs").status, "now");           // Nov 6–25
-  assert.equal(stepOf(tl, "aid").status, "now");            // Nov 11 – Dec 1
+  assert.equal(stepOf(tl, "interview").status, "late");
+  assert.equal(stepOf(tl, "docs").status, "now");
+  assert.equal(stepOf(tl, "aid").status, "now");
   assert.equal(stepOf(tl, "renew").status, "upcoming");
   assert.ok(sameDay(tl.arrival.to, new Date(2026, 11, 1)));
   assert.equal(tl.next.key, "docs");
@@ -144,7 +138,7 @@ test("checking off steps, and overdue steps you owe", () => {
   assert.equal(stepOf(done, "interview").status, "done");
   assert.equal(done.arrival.received, true);
   const old = T.buildTimeline("snap", maria, { appliedOn: "2026-10-01" }, NOV_22_2026);
-  assert.equal(stepOf(old, "docs").status, "overdue");       // Oct 6–25, nothing sent
+  assert.equal(stepOf(old, "docs").status, "overdue");
   assert.equal(old.next.key, "docs");
   assert.equal(old.arrival.late, true);
 });
@@ -155,7 +149,7 @@ test("your updates appear on the timeline in date order", () => {
     notes: [{ date: "2026-11-20", text: "Sent pay stubs" }, { date: "2026-11-10", text: "Interview done" }, { date: "2026-11-12", text: "  " }],
   }, NOV_22_2026);
   const notes = tl.items.filter((i) => i.type === "note");
-  assert.deepEqual(notes.map((n) => n.text), ["Interview done", "Sent pay stubs"]); // blank note dropped
+  assert.deepEqual(notes.map((n) => n.text), ["Interview done", "Sent pay stubs"]);
   for (let i = 1; i < tl.items.length; i++) assert.ok(tl.items[i - 1].sortDate <= tl.items[i].sortDate);
 });
 
@@ -165,7 +159,7 @@ test("programs without researched timing get an undated timeline", () => {
   assert.equal(tl.steps.length, 3);
   assert.equal(stepOf(tl, "apply").status, "done");
   assert.equal(stepOf(tl, "docs").from, null);
-  assert.equal(stepOf(tl, "aid").status, "upcoming"); // never "late" without a real date
+  assert.equal(stepOf(tl, "aid").status, "upcoming");
   assert.equal(tl.summary.source.label, "CRA");
 });
 
@@ -175,10 +169,8 @@ test("Medicaid: 2027 work reporting and 6-month renewals for expansion adults", 
   const work = stepOf(tl, "work");
   assert.ok(work && sameDay(work.from, new Date(2027, 0, 1)));
   assert.match(stepOf(tl, "renew").title, /6 months/);
-  // Parents of a child 13 or younger are exempt from work reporting.
   const parent = T.buildTimeline("medicaid-adult", base({ state: "OH", earnedMonthly: 1000, children: [5] }), { appliedOn: "2026-11-20" }, NOV_22_2026);
   assert.equal(stepOf(parent, "work"), undefined);
-  // Non-expansion state: no work step, yearly renewal.
   const tx = T.buildTimeline("medicaid-adult", base({ state: "TX", earnedMonthly: 1000, pregnant: true }), { appliedOn: "2026-11-20" }, NOV_22_2026);
   assert.equal(stepOf(tx, "work"), undefined);
   assert.match(stepOf(tx, "renew").title, /Yearly/);
@@ -189,9 +181,9 @@ test("tax credits: filing date drives refund timing", () => {
   assert.ok(sameDay(stepOf(before, "file").from, new Date(2027, 0, 26)));
   assert.ok(sameDay(before.arrival.from, new Date(2027, 2, 1)));
   const early = T.buildTimeline("eitc", maria, { appliedOn: "2027-02-01" }, new Date(2027, 1, 2));
-  assert.ok(sameDay(early.arrival.from, new Date(2027, 2, 1)));  // PATH Act hold
+  assert.ok(sameDay(early.arrival.from, new Date(2027, 2, 1)));
   const late = T.buildTimeline("eitc", maria, { appliedOn: "2027-04-01" }, new Date(2027, 3, 2));
-  assert.ok(sameDay(late.arrival.from, new Date(2027, 3, 22)));  // ~21 days
+  assert.ok(sameDay(late.arrival.from, new Date(2027, 3, 22)));
 });
 
 test("bad application dates are ignored", () => {

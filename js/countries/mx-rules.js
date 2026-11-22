@@ -1,4 +1,3 @@
-/* Mexican federal Bienestar eligibility evaluators. */
 (function (root) {
   "use strict";
 

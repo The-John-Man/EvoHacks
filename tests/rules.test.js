@@ -1,4 +1,3 @@
-// Run with:  node --test tests/
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const D = require("../js/data.js");
@@ -24,35 +23,26 @@ test("Maria: single mom, 2 kids, $2,100/mo in Texas", () => {
   assert.equal(ctx.size, 3);
   assert.equal(Math.round(ctx.pct), 92);
 
-  // SNAP: 808 - 0.3 * (2100 - 420 - 217 - (1280 - 731.5)) = 533.65
   assert.equal(C.snapMonthly(ctx).benefit, 534);
-  // EITC (2 kids): max 7316, minus 21.06% of (25,200 - 23,890)
   assert.equal(C.eitcAmount(ctx), 7040);
-  // CTC refundable: min(2 * 1700, 15% of (25,200 - 2,500))
   assert.equal(C.ctcRefundable(ctx), 3400);
 
   const res = C.screen(h);
   assert.equal(find(res, "snap").status, "likely");
-  assert.equal(find(res, "wic").status, "likely"); // child age 3
+  assert.equal(find(res, "wic").status, "likely");
   assert.equal(find(res, "school-meals").status, "likely");
-  assert.equal(find(res, "medicaid-adult").status, "unlikely"); // Texas didn't expand
+  assert.equal(find(res, "medicaid-adult").status, "unlikely");
   assert.equal(find(res, "medicaid-kids").status, "likely");
-  assert.equal(find(res, "marketplace").status, "unlikely"); // 92% in a non-expansion state = coverage gap
-  assert.equal(find(res, "sun-bucks").status, "unlikely"); // Texas opted out in 2026
+  assert.equal(find(res, "marketplace").status, "unlikely");
+  assert.equal(find(res, "sun-bucks").status, "unlikely");
   assert.ok(res.totals.likelyAnnual > 15000);
 });
 
 test("SNAP gross income test", () => {
-  // 1 person at $1,800/mo is above 130% ($1,729) and gets "maybe" (state may use 200%)
-  // (with $1,000 rent the formula still gives a benefit: 306 - 0.3 * 834.5 = 56)
   const r = C.screen(base({ earnedMonthly: 1800, rentMonthly: 1000 }));
   assert.equal(find(r, "snap").status, "maybe");
-  // same income with no housing costs: formula gives $0, so unlikely
   assert.equal(find(C.screen(base({ earnedMonthly: 1800 })), "snap").status, "unlikely");
-  // well above 200%: unlikely
   assert.equal(find(C.screen(base({ earnedMonthly: 4000 })), "snap").status, "unlikely");
-  // seniors skip the gross test and get an uncapped shelter deduction:
-  // 1083 adjusted, 658.5 excess shelter, net 424.5, 306 - 127.35 = 179
   const s = C.screen(base({ seniors: 1, otherMonthly: 1300, rentMonthly: 1200, adultWorkingAge: false }));
   assert.equal(find(s, "snap").status, "likely");
   assert.equal(find(s, "snap").annual, 179 * 12);
@@ -78,37 +68,30 @@ test("SNAP or Medicaid makes WIC and Lifeline automatic, regardless of income", 
 });
 
 test("EITC rules", () => {
-  // no earnings: no EITC
   assert.equal(C.eitcAmount(C.buildContext(base())), 0);
-  // childless worker under 25: no EITC
   assert.equal(C.eitcAmount(C.buildContext(base({ earnedMonthly: 800, adultWorkingAge: false }))), 0);
-  // childless worker at $8,680/yr hits the $664 max
   assert.equal(C.eitcAmount(C.buildContext(base({ earnedMonthly: 8680 / 12 }))), 664);
-  // investment income over the limit blocks it
   assert.equal(C.eitcAmount(C.buildContext(base({ children: [5], earnedMonthly: 1500, investmentOver: true }))), 0);
-  // married couples get extra phase-out room
   const single = C.eitcAmount(C.buildContext(base({ children: [5], earnedMonthly: 3000 })));
   const married = C.eitcAmount(C.buildContext(base({ adults: 2, married: true, children: [5], earnedMonthly: 3000 })));
   assert.ok(married > single);
-  // 1 child, income above the published $51,593 limit: zero
   assert.equal(C.eitcAmount(C.buildContext(base({ children: [5], earnedMonthly: 52000 / 12 }))), 0);
 });
 
 test("Medicaid expansion vs non-expansion", () => {
-  const low = { earnedMonthly: 1200 }; // ~90% FPL for 1 person
+  const low = { earnedMonthly: 1200 };
   assert.equal(find(C.screen(base({ ...low, state: "OH" })), "medicaid-adult").status, "likely");
   assert.equal(find(C.screen(base({ ...low, state: "TX" })), "medicaid-adult").status, "unlikely");
-  // pregnancy opens Medicaid even in non-expansion states
   assert.equal(find(C.screen(base({ ...low, state: "TX", pregnant: true })), "medicaid-adult").status, "likely");
 });
 
 test("Dorothy: senior on Social Security with medical bills", () => {
   const r = C.screen(base({ state: "FL", seniors: 1, adultWorkingAge: false, otherMonthly: 1150, housing: "own", insurance: "other", medicalBills: true, utilitiesMonthly: 210 }));
-  assert.equal(find(r, "ssi").status, "unlikely"); // $1,150 - $20 countable > $994
+  assert.equal(find(r, "ssi").status, "unlikely");
   assert.equal(find(r, "charity-care").status, "likely");
   assert.equal(find(r, "liheap").status, "likely");
-  assert.equal(find(r, "housing").status, "unlikely"); // homeowner
-  assert.equal(find(r, "eitc").status, "unlikely"); // no earned income
+  assert.equal(find(r, "housing").status, "unlikely");
+  assert.equal(find(r, "eitc").status, "unlikely");
 });
 
 test("SSI estimate for a disabled adult with small income", () => {
