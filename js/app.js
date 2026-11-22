@@ -7,7 +7,10 @@
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
   const money = (n) => "$" + Math.round(n).toLocaleString("en-US");
 
-  const views = { intro: $("#view-intro"), form: $("#view-form"), results: $("#view-results") };
+  const views = { intro: $("#view-intro"), signin: $("#view-signin"), form: $("#view-form"), results: $("#view-results") };
+  const Auth = window.ClaimableAuth || { enabled: false, user: () => null, onChange() {}, loadSaved: () => null };
+  let currentView = "intro";
+  let returnView = "intro";
   const form = $("#form");
   const steps = $$(".step");
   let step = 0;
@@ -78,6 +81,8 @@
       if (e.target.matches('input[type="number"]')) setTimeout(() => e.target.select(), 0);
     });
 
+    initAuth();
+
     const sizeBtn = $("#text-size");
     try { if (localStorage.getItem("claimable-large") === "1") setLarge(true); } catch (_) { /* storage blocked */ }
     sizeBtn.addEventListener("click", () => setLarge(!document.documentElement.classList.contains("large")));
@@ -90,8 +95,78 @@
   }
 
   function show(name) {
+    currentView = name;
     Object.entries(views).forEach(([k, el]) => (el.hidden = k !== name));
     window.scrollTo(0, 0);
+    refreshAuthUI();
+  }
+
+  // ---------- Optional sign-in (MojoAuth) ----------
+  function initAuth() {
+    if (!Auth.enabled) return; // no API key configured: login stays hidden, app works as before
+    Auth.onChange(refreshAuthUI);
+    $("#sign-in").addEventListener("click", () => openSignIn(null));
+    $("#sign-out").addEventListener("click", () => { Auth.signOut(); $("#save-status").hidden = true; show("intro"); });
+    $("#signin-cancel").addEventListener("click", () => show(returnView));
+    $("#save").addEventListener("click", () => {
+      if (Auth.user()) { saveChecklist(); return; }
+      openSignIn(() => { show("results"); saveChecklist(); });
+    });
+    $("#open-saved").addEventListener("click", () => {
+      const saved = Auth.loadSaved();
+      if (!saved) return;
+      fillForm(answersToForm(saved.answers));
+      runScreen();
+    });
+    $("#delete-saved").addEventListener("click", () => {
+      if (!window.confirm("Delete your saved checklist from this device? This can't be undone.")) return;
+      Auth.deleteSaved();
+      $("#save-status").textContent = "Your saved checklist was deleted from this device.";
+      $("#save-status").hidden = false;
+    });
+    refreshAuthUI();
+  }
+
+  function openSignIn(afterLogin) {
+    returnView = currentView === "signin" ? returnView : currentView;
+    show("signin");
+    const err = $("#signin-error");
+    err.hidden = true;
+    Auth.startSignIn(afterLogin)
+      .then(() => { if (!afterLogin) show(returnView === "signin" ? "intro" : returnView); })
+      .catch((e) => { err.textContent = e.message || "Sign-in failed. Please try again."; err.hidden = false; });
+  }
+
+  function saveChecklist() {
+    const u = Auth.user();
+    const ok = Auth.save(readForm());
+    const status = $("#save-status");
+    status.textContent = ok
+      ? `Saved on this device for ${u.email || "your account"}. Sign in here anytime to reopen it.`
+      : "Couldn't save. Your browser may be blocking storage (private mode?).";
+    status.hidden = false;
+    refreshAuthUI();
+  }
+
+  function refreshAuthUI() {
+    if (!Auth.enabled) return;
+    const u = Auth.user();
+    $("#sign-in").hidden = !!u || currentView === "signin";
+    $("#account").hidden = !u;
+    $("#account-email").textContent = u ? u.email : "";
+    $("#save").hidden = false;
+    const saved = u ? Auth.loadSaved() : null;
+    $("#welcome-back").hidden = !saved;
+    $("#delete-saved-wrap").hidden = !saved;
+    if (saved) $("#saved-date").textContent = new Date(saved.savedAt).toLocaleDateString("en-US", { month: "long", day: "numeric" });
+  }
+
+  /** Saved answers use the readForm() shape; turn them back into form field values. */
+  function answersToForm(a) {
+    const out = { ...a };
+    delete out.enrolled;
+    Object.entries(a.enrolled || {}).forEach(([k, v]) => (out["en_" + k] = v));
+    return out;
   }
 
   function goStep(n) {
@@ -188,6 +263,7 @@
   // ---------- Results ----------
   function runScreen() {
     lastResult = window.Claimable.screen(readForm());
+    $("#save-status").hidden = true;
     filter = "all";
     $$(".chip").forEach((x) => x.setAttribute("aria-selected", String(x.dataset.filter === "all")));
     render();

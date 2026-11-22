@@ -22,11 +22,29 @@ Then visit http://localhost:5317. Click **"Try an example household"** for a one
 ## Test it
 
 ```
-node --test tests/rules.test.js
+node --test tests/rules.test.js tests/auth.test.js
 ```
 
-The 12 tests check the eligibility math against hand-calculated cases (SNAP benefit formula, EITC phase-in and
+The 12 rules tests check the eligibility math against hand-calculated cases (SNAP benefit formula, EITC phase-in and
 phase-out, the refundable Child Tax Credit, Medicaid expansion vs. non-expansion states, SSI income counting, and more).
+The 7 auth tests cover parsing MojoAuth's login response, session expiry, per-user saved checklists, and blocked storage.
+
+## Optional sign-in (MojoAuth)
+
+People can sign in with a one-time email code (passwordless, via [MojoAuth](https://mojoauth.com)) to **save their
+checklist and reopen it later**, for example after gathering documents. Signing in is never required to use the screener.
+
+To turn it on:
+1. Create a free project in the MojoAuth dashboard.
+2. Add your site's URLs to the project's allowed domains (e.g. `http://localhost:5317` and your GitHub Pages URL).
+3. Enable **Email OTP** in the project's authentication settings.
+4. Paste the project's **API key** into `js/config.js`. It's a public browser key. Never put the API *secret* in this repo.
+
+With no key set, the sign-in button stays hidden and the MojoAuth script is never loaded.
+
+**Privacy:** only the email address goes to MojoAuth. Household answers are saved in that browser's local storage,
+keyed by the MojoAuth user ID, and never sent to a server. Users can delete their saved checklist with one click.
+The access token itself is not stored.
 
 ## How it works
 
@@ -35,14 +53,16 @@ index.html     3-step form + results page (semantic HTML, works on phones)
 styles.css     light/dark themes, large-text mode, print styles for the checklist
 js/data.js     every official number (2026 poverty guidelines, SNAP FY2027 tables, IRS 2026 limits), each with its source URL
 js/rules.js    the rules engine: one small, testable function per program that returns a status, reasons, and a value
-js/app.js      reads the form, calls Claimable.screen(), renders results, read-aloud
+js/app.js      reads the form, calls Claimable.screen(), renders results, read-aloud, save/sign-in UI
+js/auth.js     optional MojoAuth passwordless sign-in + per-user saved checklists (local storage)
+js/config.js   site settings (MojoAuth public API key)
 tests/         Node built-in test runner, no packages needed
 ```
 
 **Design decisions**
 - **Deterministic rules, no AI deciding eligibility.** Benefits decisions affect people's lives, so every result
   comes from plain code with a written reason the user can read ("Your income is 92% of the poverty line; the limit is 130%").
-- **Private by design.** Nothing is sent anywhere, with no backend, accounts, or analytics. Many families avoid
+- **Private by design.** Household answers are never sent anywhere, with no backend, required accounts, or analytics. Many families avoid
   benefits because they fear their data will be shared (for example, immigration concerns).
 - **Categorical eligibility.** Getting SNAP or Medicaid automatically qualifies you for WIC, Lifeline, and free school meals.
   Most people don't know this, and Claimable surfaces it.
@@ -58,6 +78,8 @@ Head Start, child care assistance, Pell Grant, TANF, SSI, housing vouchers, and 
 ## Limitations (please read)
 
 - These are **screening estimates**, not eligibility decisions. The agency that runs each program decides.
+- Saved checklists live in one browser. They don't sync across devices, because that would need a backend that verifies
+  MojoAuth's token server-side. With no server, the token isn't verified, which is acceptable only because saved data never leaves the device.
 - It uses federal rules. Many states have higher limits, extra programs, or different rules (TANF, child care, and LIHEAP vary the most).
 - Asset tests are not checked, except as a note for SSI.
 - Dollar values for WIC, school meals, and LIHEAP are national-average estimates, and they're labeled as such.
