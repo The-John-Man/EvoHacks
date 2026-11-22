@@ -9,6 +9,8 @@ It then shows *why* you may qualify, an estimated dollar value, what documents t
 
 Built for EvoHacks II, themed "Projects for Social Good."
 
+[Team roadmap and demo plan](docs/hackathon-plan.md)
+
 ## Run it
 
 No build step and no dependencies. Open `index.html` in a browser, or serve the folder:
