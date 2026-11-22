@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claimable: Find Benefits You're Missing</title>
+  <meta name="description" content="Answer a few questions and see which government programs and services your household may qualify for. Nothing you type leaves your device.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="#" id="brand-home" aria-label="Claimable home">
+        <span class="brand-mark" aria-hidden="true">$</span> Claimable
+      </a>
+      <div class="tools">
+        <button type="button" class="tool" id="text-size" aria-pressed="false" title="Larger text">A+</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="wrap">
+    <!-- Landing -->
+    <section id="view-intro" class="view" aria-labelledby="intro-title">
+      <p class="eyebrow">Free · Private · 3 minutes</p>
+      <h1 id="intro-title">Are you leaving money on the table?</h1>
+      <p class="lead">Billions of dollars in food, tax credits, health coverage, and utility help go unclaimed every year, often by families who qualify. Answer a few questions and we'll check <strong>20 programs</strong> for you.</p>
+      <ul class="trust">
+        <li><strong>Private.</strong> Nothing you type leaves this device. No account, no tracking.</li>
+        <li><strong>Clear.</strong> We show exactly why you may qualify, using official 2026 rules.</li>
+        <li><strong>Useful.</strong> You get a checklist of what to bring and where to apply.</li>
+      </ul>
+      <button type="button" class="btn btn-primary btn-lg" id="start">Check my benefits</button>
+      <details class="demo">
+        <summary>Try an example household</summary>
+        <div class="demo-list" id="demo-list"></div>
+      </details>
+    </section>
+
+    <!-- Wizard -->
+    <section id="view-form" class="view" hidden aria-labelledby="form-title">
+      <h1 id="form-title" class="sr-only">Tell us about your household</h1>
+      <ol class="steps" aria-label="Progress">
+        <li data-step="0">Household</li>
+        <li data-step="1">Income</li>
+        <li data-step="2">Situation</li>
+      </ol>
+      <form id="form" novalidate>
+        <!-- Step 1 -->
+        <fieldset class="step" data-step="0">
+          <legend>Who lives with you?</legend>
+          <p class="hint">Count people you live with and share food or money with.</p>
+
+          <label for="state">Which state do you live in?</label>
+          <select id="state" name="state" required></select>
+
+          <div class="row">
+            <div>
+              <label for="adults">Adults (18+), including you</label>
+              <input id="adults" name="adults" type="number" inputmode="numeric" min="1" max="10" value="1" required>
+            </div>
+            <div>
+              <label for="seniors">How many are 65 or older?</label>
+              <input id="seniors" name="seniors" type="number" inputmode="numeric" min="0" max="10" value="0">
+            </div>
+          </div>
+
+          <div class="checks">
+            <label class="check"><input type="checkbox" name="married"> I'm married and we file taxes together</label>
+            <label class="check"><input type="checkbox" name="adultWorkingAge" checked> At least one adult is age 25–64</label>
+            <label class="check"><input type="checkbox" name="disabled"> Someone has a disability</label>
+            <label class="check"><input type="checkbox" name="pregnant"> Someone is pregnant</label>
+          </div>
+
+          <div class="kids">
+            <p class="label-like" id="kids-label">Children under 18 (or 18 and still in high school)</p>
+            <div id="kids" aria-labelledby="kids-label"></div>
+            <button type="button" class="btn btn-ghost" id="add-kid">+ Add a child</button>
+          </div>
+        </fieldset>
+
+        <!-- Step 2 -->
+        <fieldset class="step" data-step="1" hidden>
+          <legend>Money coming in and going out</legend>
+          <p class="hint">Use your best guess for a typical month, before taxes. Add up everyone in the household.</p>
+
+          <label for="earnedMonthly">Monthly pay from work (jobs, gig work, self-employment)</label>
+          <div class="money"><span aria-hidden="true">$</span><input id="earnedMonthly" name="earnedMonthly" type="number" inputmode="decimal" min="0" step="1" value="" placeholder="0"></div>
+
+          <label for="otherMonthly">Other monthly income</label>
+          <p class="hint small" id="other-hint">Social Security, unemployment, pensions, child support received</p>
+          <div class="money"><span aria-hidden="true">$</span><input id="otherMonthly" name="otherMonthly" type="number" inputmode="decimal" min="0" step="1" value="" placeholder="0" aria-describedby="other-hint"></div>
+
+          <div class="row">
+            <div>
+              <label for="rentMonthly">Rent or mortgage per month</label>
+              <div class="money"><span aria-hidden="true">$</span><input id="rentMonthly" name="rentMonthly" type="number" inputmode="decimal" min="0" value="" placeholder="0"></div>
+            </div>
+            <div>
+              <label for="utilitiesMonthly">Utility bills per month</label>
+              <div class="money"><span aria-hidden="true">$</span><input id="utilitiesMonthly" name="utilitiesMonthly" type="number" inputmode="decimal" min="0" value="" placeholder="0"></div>
+            </div>
+          </div>
+
+          <label class="check"><input type="checkbox" name="investmentOver"> We have more than $12,200 a year in investment income (rare)</label>
+        </fieldset>
+
+        <!-- Step 3 -->
+        <fieldset class="step" data-step="2" hidden>
+          <legend>Your situation</legend>
+
+          <p class="label-like">Do you already get any of these? <span class="hint small">(We'll skip them, and some make you eligible for others.)</span></p>
+          <div class="checks grid2">
+            <label class="check"><input type="checkbox" name="en_snap"> SNAP / food stamps</label>
+            <label class="check"><input type="checkbox" name="en_medicaid"> Medicaid or CHIP</label>
+            <label class="check"><input type="checkbox" name="en_wic"> WIC</label>
+            <label class="check"><input type="checkbox" name="en_ssi"> SSI</label>
+            <label class="check"><input type="checkbox" name="en_tanf"> TANF / cash assistance</label>
+            <label class="check"><input type="checkbox" name="en_liheap"> Energy bill help (LIHEAP)</label>
+            <label class="check"><input type="checkbox" name="en_lifeline"> Lifeline phone discount</label>
+            <label class="check"><input type="checkbox" name="en_schoolMeals"> Free/reduced school meals</label>
+            <label class="check"><input type="checkbox" name="en_housing"> Section 8 / public housing</label>
+            <label class="check"><input type="checkbox" name="en_headStart"> Head Start</label>
+            <label class="check"><input type="checkbox" name="en_childcare"> Child care assistance</label>
+          </div>
+
+          <label for="housing">Where do you live?</label>
+          <select id="housing" name="housing">
+            <option value="rent">I rent</option>
+            <option value="own">I own my home</option>
+            <option value="homeless">I don't have stable housing right now</option>
+            <option value="other">Other (staying with family, etc.)</option>
+          </select>
+
+          <label for="insurance">Health insurance for the adults</label>
+          <select id="insurance" name="insurance">
+            <option value="none">No insurance</option>
+            <option value="employer">Through a job</option>
+            <option value="medicaid">Medicaid</option>
+            <option value="marketplace">HealthCare.gov plan</option>
+            <option value="other">Medicare or other</option>
+          </select>
+
+          <div class="checks">
+            <label class="check"><input type="checkbox" name="paysEnergy" checked> We pay for heating or cooling</label>
+            <label class="check"><input type="checkbox" name="behindUtilities"> We're behind on utility bills or got a shutoff notice</label>
+            <label class="check"><input type="checkbox" name="medicalBills"> We have hospital or medical bills</label>
+            <label class="check"><input type="checkbox" name="needsChildcare"> I need child care to work or go to school</label>
+            <label class="check"><input type="checkbox" name="student"> Someone is in (or starting) college</label>
+          </div>
+        </fieldset>
+
+        <p class="error" id="form-error" role="alert" hidden></p>
+
+        <div class="nav">
+          <button type="button" class="btn btn-ghost" id="back">Back</button>
+          <button type="submit" class="btn btn-primary" id="next">Next</button>
+        </div>
+      </form>
+      <p class="privacy-note">🔒 Your answers stay in this browser tab. Close it and they're gone.</p>
+    </section>
+
+    <!-- Results -->
+    <section id="view-results" class="view" hidden aria-labelledby="results-title" tabindex="-1">
+      <div class="hero">
+        <p class="eyebrow" id="results-household"></p>
+        <h1 id="results-title"></h1>
+        <p class="lead" id="results-sub"></p>
+      </div>
+
+      <div class="actions no-print">
+        <button type="button" class="btn btn-primary" id="print">Print my checklist</button>
+        <button type="button" class="btn btn-ghost" id="read">🔊 Read results aloud</button>
+        <button type="button" class="btn btn-ghost" id="edit">Change answers</button>
+      </div>
+
+      <div class="filters no-print" role="tablist" aria-label="Filter results">
+        <button type="button" role="tab" class="chip" data-filter="all" aria-selected="true">All matches</button>
+        <button type="button" role="tab" class="chip" data-filter="Food" aria-selected="false">Food</button>
+        <button type="button" role="tab" class="chip" data-filter="Taxes" aria-selected="false">Taxes</button>
+        <button type="button" role="tab" class="chip" data-filter="Health" aria-selected="false">Health</button>
+        <button type="button" role="tab" class="chip" data-filter="Utilities" aria-selected="false">Utilities</button>
+        <button type="button" role="tab" class="chip" data-filter="other" aria-selected="false">More</button>
+      </div>
+
+      <h2 class="group-title">Likely eligible</h2>
+      <div id="list-likely" class="cards"></div>
+
+      <h2 class="group-title">Worth checking</h2>
+      <p class="hint">These depend on your state's rules or on things we didn't ask.</p>
+      <div id="list-maybe" class="cards"></div>
+
+      <details class="more no-print">
+        <summary>You already get (<span id="count-enrolled">0</span>)</summary>
+        <div id="list-enrolled" class="cards compact"></div>
+      </details>
+      <details class="more no-print">
+        <summary>Probably not eligible, and why (<span id="count-unlikely">0</span>)</summary>
+        <div id="list-unlikely" class="cards compact"></div>
+      </details>
+
+      <aside class="disclaimer">
+        <h2>How this works</h2>
+        <p>Claimable uses published 2026 federal rules (poverty guidelines, SNAP FY2027 tables, IRS 2026 tax credit limits) to <em>estimate</em> what you may qualify for. It isn't an application, and only the agency that runs each program can decide your eligibility. Dollar amounts are estimates. States often have extra programs and different limits, so call <strong>211</strong> for local help.</p>
+        <p class="small">Rules last updated: <span id="as-of"></span>. Every program card links to its official source.</p>
+      </aside>
+    </section>
+  </main>
+
+  <footer class="footer wrap">
+    <p>Built for EvoHacks II · Not affiliated with any government agency · <a href="https://www.usa.gov/benefits" rel="noopener">USA.gov benefits</a></p>
+  </footer>
+
+  <script src="js/data.js"></script>
+  <script src="js/rules.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
