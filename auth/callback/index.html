@@ -31,7 +31,7 @@
         return fail(params.get("error_description") || "Sign-in was cancelled. You can keep using Claimable without an account.");
       }
       Auth.completeSignIn()
-        .then(function (r) { location.replace(home + (r.saved ? "#saved" : "#signed-in")); })
+        .then(function (r) { location.replace(home + (r.returnToReview ? "apply/" : r.saved ? "#saved" : "#signed-in")); })
         .catch(function (e) { fail((e && e.message) || "Please try again."); });
     })();
   </script>

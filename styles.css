@@ -172,6 +172,20 @@ details[open] > summary::before { transform: rotate(90deg); }
 .disclaimer h2 { margin-top: 0; font-size: 1.05rem; }
 .footer { color: var(--ink-soft); font-size: .85rem; padding-bottom: 32px; }
 
+.review-choices { max-width: 32rem; }
+.review-choices legend { font-size: 1.2rem; }
+.review-choices .check { margin-bottom: .4rem; align-items: center; flex-wrap: wrap; }
+.review-choices strong { margin-left: auto; }
+.review-hosted { margin-top: 1.5rem; border-top: 1px solid var(--line); padding-top: .5rem; }
+.review-summary { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 1rem; }
+.review-summary div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem; padding: .7rem 0; }
+.review-summary div + div { border-top: 1px solid var(--line); }
+.review-summary dd { margin: 0; font-weight: 700; }
+.review-viewer { display: block; width: 100%; height: 68vh; border: 1px solid var(--line); margin: 1rem 0; border-radius: var(--radius); }
+.keypad-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; max-width: 17rem; }
+.keypad-keys button:last-child { grid-column: 1 / -1; }
+.btn:disabled { opacity: .65; cursor: wait; }
+
 @media print {
   .topbar, .no-print, .footer, .filters, .actions { display: none !important; }
   body { background: #fff; color: #000; }

@@ -47,6 +47,8 @@ test("appBase works locally, on GitHub Pages, and on the callback page", () => {
   assert.equal(A.appBase("/EvoHacks/"), "/EvoHacks/");
   assert.equal(A.appBase("/EvoHacks/index.html"), "/EvoHacks/");
   assert.equal(A.appBase("/EvoHacks/auth/callback/"), "/EvoHacks/");
+  assert.equal(A.appBase("/EvoHacks/apply/index.html"), "/EvoHacks/");
+  assert.equal(A.appBase("/apply/"), "/");
 });
 
 test("OIDC settings: code flow, public client, correct redirect URIs and scopes", () => {
