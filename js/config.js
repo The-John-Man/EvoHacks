@@ -12,5 +12,5 @@
  * Leave the key empty and login is hidden. The screener works fully without it.
  */
 window.CLAIMABLE_CONFIG = {
-  mojoAuthApiKey: "",
+  mojoAuthApiKey: "b4bafbd6-1301-48fa-8256-a6dfc9d9fbad",
 };
