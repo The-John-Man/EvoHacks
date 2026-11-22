@@ -4,11 +4,15 @@ The next phase provides full screening flows for Canada and Mexico. Start with t
 
 ## What is live on this branch
 
-Merged with `main`: the full **U.S.** screener (`Claimable.screen`, 20 federal programs). **Try an example** loads four U.S.-only demo households (`DEMOS` in `js/app.js`); they are not Canada or Mexico scenarios.
+North America screening: choose **United States / Canada / Mexico** and **English / Français / Español** on the homepage, then complete a country-specific intake and see explained matches with a printable checklist.
 
-This PR adds an expandable **Canada & Mexico official guides** block on the intro page (`details.country-guides` in `index.html`). It works with a keyboard and with JavaScript disabled and sends users to agency pages without posting form values.
+| Country | Engine | Programs |
+| --- | --- | --- |
+| United States | `Claimable.screen` | 20 federal programs |
+| Canada | `ClaimableCA.screen` | CCB, OAS, GIS, CDB, CDCP |
+| Mexico | `ClaimableMX.screen` | Adultos Mayores, Mujeres Bienestar, discapacidad, Rita Cetina, Benito Juárez, JCF |
 
-The U.S. form still asks about state, monthly USD income, insurance and federal enrollment. A parent looking for Canadian child benefits should use the official links before answering those questions. Full CA/MX intake and rules are not implemented yet.
+Example households are filtered by selected country. Official agency links remain in `details.country-guides` for no-JS users. Provincial/territorial and estado-local catalogs are **not** fully screened yet — see README limitations.
 
 ## First two screening pilots
 

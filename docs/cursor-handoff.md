@@ -37,15 +37,15 @@ Open `http://localhost:5317`. Run existing tests with `node --test tests/rules.t
 - [x] Directory skeleton: U.S. intake and demos stay one click away; Canada/Mexico get official referral links before any household questions.
 - [x] Branch kept current with `origin/main` (Claimable engine unchanged; guides + docs layered on top).
 
-### Still to do (full CA/MX screening — separate from this integration)
+### Implemented (North America screening)
 
-- [ ] Introduce a country choice before household intake, initially supporting US, CA and MX. Add language selection for English, French and Spanish, independent of residence.
-- [ ] Add an explicit country dispatcher and wrap the existing U.S. engine (`Claimable.screen`). Add a regression test that CA/MX and invalid country values never reach U.S. rules.
-- [ ] Implement the Canadian child benefit flow end to end using current CRA rules, then the Mexican older-adult pension using current operating rules. Deliver a complete question-to-checklist path for each.
-- [ ] Add country-aware results, currency, payment cadence, enrollment state and source dates. Handle missing answers and application availability.
-- [ ] Add Canadian seniors and disability coverage and Mexican women, disability and education coverage using the research backlog. Each implemented program needs independently derived examples.
-- [ ] Localize every visible question, error, result reason, printed label and read-aloud string. Review native-language terminology against official sources.
-- [ ] Complete the acceptance scenarios in the specification, then update README coverage and PR description to describe the implemented behavior.
+- [x] Introduce a country choice before household intake, supporting US, CA and MX. Language selection for English, French and Spanish, independent of residence.
+- [x] Explicit country dispatcher wrapping the U.S. engine (`Claimable.screen`). Regression tests that CA/MX and invalid country values never reach U.S. rules.
+- [x] Canadian federal catalog: CCB (CRA calculation sheet 2025–26), OAS, GIS, CDB, CDCP — question-to-checklist path with demos.
+- [x] Mexican federal catalog: Pensión Adultos Mayores, Mujeres Bienestar, discapacidad, Rita Cetina, Benito Juárez, JCF — with demos.
+- [x] Country-aware results, CAD/MXN currency, payment cadence, enrollment flags, application availability labels, missing-answer follow-ups.
+- [x] UI localization EN/FR/ES (`js/i18n.js`); speech `lang` follows selector. Program reason text remains in the language of the country module (EN for CA evaluators, ES for MX).
+- [x] README coverage counts and explicit non-feasibles (no provincial catalogs, no SIN/CURP capture, no live APIs).
 
 ## Definition of the first usable release
 
