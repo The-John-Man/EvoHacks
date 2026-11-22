@@ -19,6 +19,7 @@
 
   const SESSION_KEY = "claimable-session";
   const SAVED_PREFIX = "claimable-saved:";
+  const TRACK_PREFIX = "claimable-track:";
   const SESSION_HOURS = 24 * 7;
   const OIDC_LIB = "https://cdn.jsdelivr.net/npm/oidc-client-ts@3.1.0/dist/browser/oidc-client-ts.min.js";
   const SCOPES = "openid profile email";
@@ -71,11 +72,13 @@
       clearSession() { del(SESSION_KEY); },
       saveResults(userId, answers, now = Date.now()) { return set(SAVED_PREFIX + userId, { answers, savedAt: now }); },
       loadResults(userId) { return get(SAVED_PREFIX + userId); },
-      deleteResults(userId) { del(SAVED_PREFIX + userId); },
+      deleteResults(userId) { del(SAVED_PREFIX + userId); del(TRACK_PREFIX + userId); },
+      saveTracking(userId, tracking) { return set(TRACK_PREFIX + userId, tracking || {}); },
+      loadTracking(userId) { return get(TRACK_PREFIX + userId) || {}; },
     };
   }
 
-  const AuthCore = { sessionFromOidcUser, appBase, oidcSettings, makeStore, SESSION_KEY, SAVED_PREFIX, SCOPES };
+  const AuthCore = { sessionFromOidcUser, appBase, oidcSettings, makeStore, SESSION_KEY, SAVED_PREFIX, TRACK_PREFIX, SCOPES };
   root.ClaimableAuthCore = AuthCore;
   if (typeof module !== "undefined" && module.exports) { module.exports = AuthCore; return; }
 
@@ -141,6 +144,10 @@
       const intent = oidcUser.state || {};
       let saved = false;
       if (intent.save && intent.answers) saved = store.saveResults(session.userId, intent.answers);
+      if (intent.tracking && typeof intent.tracking === "object") {
+        // Merge timelines started before signing in with any already saved for this user.
+        store.saveTracking(session.userId, { ...store.loadTracking(session.userId), ...intent.tracking });
+      }
       return { session, saved };
     },
 
@@ -169,6 +176,14 @@
       const u = Auth.user();
       if (u) store.deleteResults(u.userId);
       Auth._emit();
+    },
+    saveTracking(tracking) {
+      const u = Auth.user();
+      return !!u && store.saveTracking(u.userId, tracking);
+    },
+    loadTracking() {
+      const u = Auth.user();
+      return u ? store.loadTracking(u.userId) : null;
     },
   };
 

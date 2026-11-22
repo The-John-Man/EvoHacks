@@ -19,6 +19,9 @@
   let step = 0;
   let lastResult = null;
   let filter = "all";
+  let lastAnswers = null;
+  let tracking = {}; // per program id: { appliedOn: "YYYY-MM-DD", done: {stepKey: bool}, notes: [{date, text}] }
+  const closedTimelines = new Set(); // timelines start open; remember the ones the user closes
   let selectedCountry = "US";
   let pendingCountry = "US";
 
@@ -252,6 +255,7 @@
       $$(".chip").forEach((x) => x.setAttribute("aria-selected", String(x === c)));
       render();
     }));
+    initTimelines();
 
     form.addEventListener("focusin", (e) => {
       if (e.target.matches('input[type="number"]')) setTimeout(() => e.target.select(), 0);
@@ -287,13 +291,18 @@
     if (!Auth.enabled) return; // no issuer/client ID configured: login stays hidden, app works as before
     Auth.onChange(refreshAuthUI);
     $("#sign-in").addEventListener("click", () => openSignIn({}));
-    $("#sign-out").addEventListener("click", () => { $("#save-status").hidden = true; show("intro"); Auth.signOut(); });
+    $("#sign-out").addEventListener("click", () => {
+      $("#save-status").hidden = true;
+      tracking = {}; // don't leave the signed-out user's timelines on screen
+      show("intro");
+      Auth.signOut();
+    });
     $("#signin-cancel").addEventListener("click", () => show(returnView));
     $("#signin-go").addEventListener("click", goToMojoAuth);
     $("#save").addEventListener("click", () => {
       if (Auth.user()) { saveChecklist(); return; }
       // Carry the answers through the redirect so the checklist is saved the moment they're back.
-      openSignIn({ save: true, answers: readForm() });
+      openSignIn({ save: true, answers: readForm(), tracking });
     });
     $("#open-saved").addEventListener("click", () => {
       const saved = Auth.loadSaved();
@@ -358,6 +367,7 @@
   function saveChecklist() {
     const u = Auth.user();
     const ok = Auth.save(readForm());
+    if (ok && Auth.saveTracking) Auth.saveTracking(tracking);
     showStatus(ok
       ? `Saved on this device for ${u.email || "your account"}. Sign in here anytime to reopen it.`
       : "Couldn't save. Your browser may be blocking storage (private mode?).");
@@ -566,7 +576,10 @@
 
   function runScreen() {
     try {
-      lastResult = Countries.screen(selectedCountry, readForm());
+      lastAnswers = readForm();
+      lastResult = Countries.screen(selectedCountry, lastAnswers);
+      const savedTracking = Auth.user() && Auth.loadTracking ? Auth.loadTracking() : null;
+      if (savedTracking) tracking = savedTracking;
     } catch (e) {
       $("#form-error").textContent = e.message || t("startNeedCountry");
       $("#form-error").hidden = false;
@@ -630,6 +643,144 @@
     $("#count-unlikely").textContent = by("unlikely").length;
   }
 
+  // ---------- Per-program timelines ----------
+  const todayISO = () => window.ClaimableTiming.toISO(new Date());
+  const dateLocale = () => ({ en: "en-US", fr: "fr-CA", es: "es-MX" }[I18n.getLang()] || "en-US");
+
+  function fmtDay(d) {
+    if (!d) return t("tlVaries");
+    const sameYear = d.getFullYear() === new Date().getFullYear();
+    return d.toLocaleDateString(dateLocale(), sameYear ? { month: "short", day: "numeric" } : { month: "short", day: "numeric", year: "numeric" });
+  }
+  const fmtRange = (a, b) => (!a ? t("tlVaries") : !b || a.getTime() === b.getTime() ? fmtDay(a) : `${fmtDay(a)} – ${fmtDay(b)}`);
+
+  function timelineBlock(r) {
+    const T = window.ClaimableTiming;
+    if (!T || !lastAnswers || (r.status !== "likely" && r.status !== "maybe")) return "";
+    const tr = tracking[r.id] || {};
+    // No date entered yet: assume the application date is today and show the estimated timeline.
+    const assumed = !tr.appliedOn;
+    // Tax credits are claimed by filing during tax season, so "today" can't be the filing date:
+    // their estimate follows the filing-season calendar instead.
+    const isTax = selectedCountry === "US" && (r.id === "eitc" || r.id === "ctc");
+    const effective = assumed && !isTax ? { ...tr, appliedOn: todayISO() } : tr;
+    // Programs from other countries use the undated fallback plan (no U.S. rules involved).
+    const household = selectedCountry === "US" ? lastAnswers : null;
+    const programId = selectedCountry === "US" ? r.id : `${selectedCountry}:${r.id}`;
+    const tl = T.buildTimeline(programId, household, effective, new Date(), { source: r.source });
+    if (!tl) return "";
+    const s = tl.summary;
+    const list = (arr) => (arr && arr.length ? `<ul class="docs">${arr.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "");
+    const undated = s.basis === "unknown";
+
+    let badge;
+    if (tl.arrival && tl.arrival.received) badge = `✓ ${t("tlReceived")}`;
+    else if (tl.arrival && tl.arrival.from) {
+      const prefix = assumed ? t("tlEstimatedBadge") : tl.arrival.late ? t("tlLate") : t("tlExpected");
+      badge = `${prefix} ${fmtRange(tl.arrival.from, tl.arrival.to)}`;
+    } else badge = t("tlTimingVaries");
+    const steps = tl.items.filter((it) => it.type === "step");
+    const next = tl.next && (undated ? t(`gen_${tl.next.key}_title`) : tl.next.title);
+    const items = steps.map((raw, i) => {
+      // The undated fallback (Canada/Mexico) is translated; U.S. step text is English for now.
+      const title = undated ? t(`gen_${raw.key}_title`) : raw.title;
+      const status = assumed && raw.key === "apply" ? "now" : raw.status;
+      const done = status === "done";
+      const canCheck = raw.key !== "apply" && !(assumed && isTax);
+      const number = `<span class="tl-number" aria-hidden="true">${done ? "&#10003;" : i + 1}</span>`;
+      const marker = canCheck
+        ? `<label class="tl-marker"><input type="checkbox" data-act="step" data-key="${esc(raw.key)}"
+              aria-label="${esc(title)} — ${esc(t("done_" + raw.kind))}" ${done ? "checked" : ""}>${number}</label>`
+        : `<span class="tl-marker">${number}</span>`;
+      const alert = ["now", "late", "overdue"].includes(status) ? ` · ${esc(t("st_" + status))}` : "";
+      return `<li class="tl-step s-${status}" ${tl.next && raw.key === tl.next.key ? 'aria-current="step"' : ""}>
+        ${marker}<div class="tl-caption"><h4>${esc(title)}</h4>
+        <span class="tl-date">${esc(fmtRange(raw.from, raw.to))}${alert}</span></div></li>`;
+    }).join("");
+    const notes = tl.items.filter((it) => it.type === "note").map((it) =>
+      `<li class="tl-item k-note"><div class="tl-date">${esc(fmtDay(it.date))} · ${esc(t("tlYourUpdate"))}</div>
+        <p class="tl-note-text">${esc(it.text)}</p>
+        <button type="button" class="tl-del" data-act="del-note" data-index="${it.index}">${esc(t("tlRemove"))}</button></li>`
+    ).join("");
+
+    let saveLine;
+    if (!Auth.enabled) saveLine = esc(t("tlPageOnly"));
+    else if (Auth.user()) saveLine = esc(t("tlSavedFor", { email: Auth.user().email || "your account" }));
+    else saveLine = `${esc(t("tlNotSaved"))} <button type="button" class="linklike" data-act="signin-save">${esc(t("tlSignInSave"))}</button>`;
+
+    const id = esc(r.id);
+    return `
+      <div class="tl-overview"><span class="time-badge">${esc(badge)}</span>
+        ${next ? `<span><strong>${esc(t("tlNext"))}</strong> ${esc(next)} · ${esc(fmtRange(tl.next.from, tl.next.to))}</span>` : ""}</div>
+      <details class="tl" ${closedTimelines.has(r.id) ? "" : "open"}><summary>${esc(t("tlSummary"))}</summary>
+        <div class="tl-applied">
+          <div><label for="ad-${id}">${esc(t("tlApplied"))}</label>
+          <input type="date" id="ad-${id}" data-act="applied" value="${esc(effective.appliedOn || "")}" max="${todayISO()}"></div>
+          ${tr.appliedOn ? `<button type="button" class="btn btn-ghost" data-act="clear">${esc(t("tlReset"))}</button>` : ""}
+          ${undated ? `<p class="tl-est">${esc(t("tlUndated"))}</p>` : assumed ? `<p class="tl-est">${esc(t(isTax ? "tlEstimatedTax" : "tlEstimated"))}</p>` : ""}
+        </div>
+        <ol class="tl-steps" aria-label="${esc(t("tlSummary"))}">${items}</ol>
+        ${notes ? `<p class="label-like small" style="margin:12px 0 6px">${esc(t("tlUpdates"))}</p><ol class="tl-list">${notes}</ol>` : ""}
+        <div class="tl-foot">
+          <div class="tl-source"><p class="basis">${esc(undated ? t("basis_unknown") : T.BASIS_LABEL[s.basis] || "")}</p>
+          ${s.deadline ? `<p class="deadline">⚠ ${esc(s.deadline)}</p>` : ""}
+          ${s.source && s.source.url ? `<a class="source" href="${esc(s.source.url)}" target="_blank" rel="noopener">${esc(t("tlSource"))} ${esc(s.source.label)}</a>` : ""}</div>
+          ${s.speedUp && s.speedUp.length ? `<div class="tl-tips"><p class="label-like small" style="margin:6px 0 2px">${esc(t("tlGetFaster"))}</p>${list(undated ? [t("gen_tip")] : s.speedUp)}</div>` : ""}
+          <p class="tl-save">${saveLine}</p>
+        </div>
+      </details>`;
+  }
+
+  function updateTracking(id, fn, focusSel) {
+    const tr = { done: {}, notes: [], ...(tracking[id] || {}) };
+    fn(tr);
+    tracking[id] = tr;
+    if (Auth.user && Auth.user() && Auth.saveTracking) Auth.saveTracking(tracking);
+    rerenderCard(id, focusSel);
+  }
+
+  function rerenderCard(id, focusSel) {
+    const el = views.results.querySelector(`article.card[data-id="${CSS.escape(id)}"]`);
+    const r = lastResult && lastResult.results.find((x) => x.id === id);
+    if (!el || !r) return;
+    el.outerHTML = card(r, false);
+    if (focusSel) {
+      const f = views.results.querySelector(`article.card[data-id="${CSS.escape(id)}"] ${focusSel}`);
+      if (f) f.focus();
+    }
+  }
+
+  function initTimelines() {
+    const root = views.results;
+    const idOf = (el) => { const c = el.closest && el.closest("article.card"); return c ? c.dataset.id : null; };
+    root.addEventListener("toggle", (e) => {
+      if (!e.target.matches || !e.target.matches("details.tl")) return;
+      const id = idOf(e.target);
+      if (e.target.open) closedTimelines.delete(id); else closedTimelines.add(id);
+    }, true);
+    root.addEventListener("change", (e) => {
+      const el = e.target;
+      const id = idOf(el);
+      if (!id) return;
+      if (el.dataset.act === "applied") {
+        const v = el.value && el.value <= todayISO() ? el.value : null;
+        updateTracking(id, (tr) => { tr.appliedOn = v; }, '[data-act="applied"]');
+      } else if (el.dataset.act === "step") {
+        // Checking off a step on an estimated timeline locks in today as the application date.
+        updateTracking(id, (tr) => { tr.appliedOn = tr.appliedOn || todayISO(); tr.done = { ...tr.done, [el.dataset.key]: el.checked }; }, `[data-key="${el.dataset.key}"]`);
+      }
+    });
+    root.addEventListener("click", (e) => {
+      const el = e.target.closest("[data-act]");
+      if (!el) return;
+      const id = idOf(el);
+      const act = el.dataset.act;
+      if (act === "clear") updateTracking(id, (tr) => { tr.appliedOn = null; tr.done = {}; }, '[data-act="applied"]');
+      else if (act === "del-note") updateTracking(id, (tr) => { tr.notes = tr.notes.filter((_, i) => i !== +el.dataset.index); }, '[data-act="applied"]');
+      else if (act === "signin-save") openSignIn({ save: true, answers: readForm(), tracking });
+    });
+  }
+
   function esc(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
@@ -649,11 +800,12 @@
     if (compact) {
       return `<article class="card ${r.status}"><div class="card-head"><div><span class="tag">${esc(r.category)}</span><h3>${esc(r.name)}</h3></div></div>${why}</article>`;
     }
-    return `<article class="card ${r.status}" aria-label="${esc(r.name)}">
+    return `<article class="card ${r.status}" data-id="${esc(r.id)}" aria-label="${esc(r.name)}">
       <div class="card-head">
         <div><span class="tag">${esc(r.category)}</span><h3>${esc(r.name)}</h3></div>
         ${r.valueLabel ? `<div class="value">${esc(r.valueLabel)}</div>` : ""}
       </div>
+      ${timelineBlock(r)}
       <p class="blurb">${esc(r.blurb)}</p>
       <p class="label-like small" style="margin:8px 0 2px">${esc(t("whyLabel"))}</p>
       ${why}
