@@ -15,6 +15,17 @@ Add your name in the owner column or comment on the roadmap PR with the workstre
 | Country rules and timelines | Open | Keep the U.S. screener working. Verify one Canadian and one Mexican program, each with country-specific questions, an official next step, and a sample household. Build a sourced timeline for the U.S. demo program. |
 | MojoAuth and saving | Open | Let guests finish screening. Offer passwordless login at **Save progress**. Sync checklist progress across browsers and let users explicitly save original documents in an encrypted vault on the original device. |
 
+## Prepare my application
+
+The applicant experience owner builds the review screen. The country rules owner verifies the form version, field meanings, and filing instructions. Start with Maria's Texas SNAP example and the official Texas Works Application for Assistance (H1010).
+
+1. From a SNAP result, Maria selects **Prepare my application**. On her device, map confirmed household answers into matching fields on the current official form. Ask for missing answers in the agency's units and time periods. Leave unknowns blank and let Maria go straight to the agency at any point.
+2. Show each prepared answer with its source and an edit control. For example, Maria's household income estimate alone cannot answer how much a particular employer paid her on a particular date. Ask her for that detail. Keep signatures and attestations for her personal review and completion.
+3. Generate a printable, unsigned copy of the official form with the reviewed answers in place. Show the agency's filing instructions so Maria can sign and submit it herself. Offer the official online route alongside it and label any re-entry it requires. A prefilled online handoff is a later integration that requires documented agency support. [Texas application procedures](https://fhb.hhs.texas.gov/handbooks/texas-works-handbook/a-120-office-procedures)
+4. Demo with fictional data: edit an answer and verify the exported form changes, leave a question unanswered and verify the field stays blank, and check that exporting keeps the timeline at **Prepared**. Only record **Submitted** when Maria reports filing. Verify the form layout against the current agency version before release.
+
+**AI budget:** Fixed field mappings, validation, review, and PDF generation use zero language-model tokens. The on-device document reader can optionally suggest values for Maria to confirm. Keep the application draft and source documents on-device.
+
 ## Where the features meet
 
 - **Results and rules.** Distinguish an unknown answer from “No.” Start with the existing WIC rule that considers Medicaid enrollment. When the answer would affect a result, ask once, rerun the rule, and explain the change. Keep uncertainty visible when the applicant selects “I'm not sure.”
