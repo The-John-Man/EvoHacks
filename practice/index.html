@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Practice application · Claimable</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <main id="main" class="wrap">
+    <section id="entry" class="view">
+      <p class="eyebrow">Claimable · Practice application</p>
+      <h1>Household and housing costs</h1>
+      <p class="lead">Use fictional answers only. You can edit each field or leave it blank. This exercise does not file for benefits.</p>
+      <form id="practice-form" method="dialog" autocomplete="off">
+        <label for="householdSize">Household size</label>
+        <input type="number" id="householdSize" name="householdSize" inputmode="numeric" min="1" step="1">
+        <div class="row">
+          <div>
+            <label for="rentMonthly">Monthly rent</label>
+            <div class="money"><span aria-hidden="true">$</span><input type="number" id="rentMonthly" name="rentMonthly" inputmode="decimal" min="0" step="0.01"></div>
+          </div>
+          <div>
+            <label for="utilitiesMonthly">Monthly utilities</label>
+            <div class="money"><span aria-hidden="true">$</span><input type="number" id="utilitiesMonthly" name="utilitiesMonthly" inputmode="decimal" min="0" step="0.01"></div>
+          </div>
+        </div>
+        <div id="practice-keypad" role="group" aria-label="Number pad" hidden>
+          <p id="keypad-value" class="hint" aria-live="polite"></p>
+          <div class="keypad-keys"></div>
+        </div>
+        <div class="signin-actions"><button type="submit" class="btn btn-primary">Review answers</button></div>
+      </form>
+    </section>
+    <section id="review" class="view" hidden>
+      <p class="eyebrow">Claimable · Practice application</p>
+      <h1 tabindex="-1">Review your practice answers</h1>
+      <dl class="review-summary">
+        <div><dt>Household size</dt><dd data-answer="householdSize"></dd></div>
+        <div><dt>Monthly rent</dt><dd data-answer="rentMonthly"></dd></div>
+        <div><dt>Monthly utilities</dt><dd data-answer="utilitiesMonthly"></dd></div>
+      </dl>
+      <div class="signin-actions">
+        <button class="btn btn-primary" type="button" id="finish">Finish practice</button>
+        <button class="btn btn-ghost" type="button" id="edit">Edit answers</button>
+      </div>
+    </section>
+    <section id="done" class="view" hidden>
+      <h1 tabindex="-1">Practice complete</h1>
+      <p class="lead">You reviewed a sample form. No benefits application was submitted.</p>
+      <p id="completion-status" role="status"></p>
+      <button type="button" id="restart" class="btn btn-ghost">Practice again</button>
+    </section>
+  </main>
+  <script src="../js/practice-sample.js"></script>
+  <script src="../practice/practice.js"></script>
+</body>
+</html>

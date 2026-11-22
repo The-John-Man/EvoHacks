@@ -1,0 +1,17 @@
+{
+  "name": "claimable",
+  "private": true,
+  "engines": { "node": ">=22.12" },
+  "scripts": {
+    "build": "node scripts/build-site.mjs",
+    "test": "node --test",
+    "test:review": "node scripts/check-review-ui.mjs",
+    "autofill:demo": "node scripts/autofill.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.2",
+    "@playwright/mcp": "0.0.86",
+    "jose": "^6.1.0",
+    "playwright": "1.66.0-alpha-2026-11-18"
+  }
+}

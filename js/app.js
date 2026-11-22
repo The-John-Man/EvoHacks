@@ -362,6 +362,7 @@
       <details><summary>What to bring</summary><ul class="docs">${r.docs.map((d) => `<li>${esc(d)}</li>`).join("")}</ul></details>
       <div class="card-foot">
         <a class="btn btn-primary" href="${esc(r.apply.url)}" target="_blank" rel="noopener">${esc(r.apply.label)} ↗</a>
+        ${r.id === "snap" && form.elements.state.value === "TX" ? '<a class="btn btn-ghost no-print" href="apply/index.html">Try application autofill</a>' : ""}
         <a class="source" href="${esc(r.source.url)}" target="_blank" rel="noopener">Source: ${esc(r.source.label)}</a>
       </div>
     </article>`;

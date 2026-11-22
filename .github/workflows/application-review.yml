@@ -1,0 +1,32 @@
+name: Application review
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  practice:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx --no-install playwright install --with-deps chromium webkit
+      - name: Fill the practice form through Playwright MCP
+        run: npm run autofill:demo
+      - name: Review and correct a draft in mobile Chromium
+        run: npm run test:review
+      - name: Review and correct a draft in mobile WebKit
+        run: npm run test:review -- --webkit

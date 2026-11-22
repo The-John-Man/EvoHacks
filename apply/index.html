@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Prepare a practice application · Claimable</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="topbar"><div class="wrap topbar-inner">
+    <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true">$</span> Claimable</a>
+    <button type="button" class="tool tool-text" id="sign-out" hidden>Sign out</button>
+  </div></header>
+  <main id="main" class="wrap">
+    <section id="setup" class="view" aria-labelledby="setup-title">
+      <p class="eyebrow">Texas SNAP practice form</p>
+      <h1 id="setup-title" tabindex="-1">Choose answers to fill</h1>
+      <p class="lead">Practice with Maria’s fictional household. Review and edit the filled form before finishing.</p>
+      <fieldset id="choices" class="review-choices">
+        <legend>Maria’s sample answers</legend>
+        <p class="hint">Uncheck an answer to leave that field blank.</p>
+        <label class="check"><input type="checkbox" value="householdSize" checked> Household size <strong></strong></label>
+        <label class="check"><input type="checkbox" value="rentMonthly" checked> Monthly rent <strong></strong></label>
+        <label class="check"><input type="checkbox" value="utilitiesMonthly" checked> Monthly utilities <strong></strong></label>
+      </fieldset>
+      <div class="signin-actions">
+        <button type="button" id="local" class="btn btn-primary">Practice on this device</button>
+      </div>
+      <section id="hosted-option" class="review-hosted" hidden>
+        <h2>Practice in a hosted browser</h2>
+        <p>Sign in to try Playwright autofill. Only the selected sample answers go to Browserbase. Keep any edits fictional.</p>
+        <button type="button" id="hosted" class="btn btn-ghost">Start hosted practice</button>
+      </section>
+    </section>
+    <section class="view" id="live" hidden aria-labelledby="live-title">
+      <p class="eyebrow">Hosted practice session</p>
+      <h1 id="live-title" tabindex="-1">Review the filled form</h1>
+      <p class="hint">Use fictional answers while you practice. Tap a field for the number pad. Finish practice closes the hosted browser.</p>
+      <iframe id="viewer" class="review-viewer" title="Interactive practice application" sandbox="allow-same-origin allow-scripts" referrerpolicy="no-referrer"></iframe>
+      <div class="signin-actions">
+        <button type="button" id="reconnect" class="btn btn-primary" hidden>Reconnect to practice</button>
+        <button type="button" id="end-session" class="btn btn-ghost">End hosted session</button>
+      </div>
+    </section>
+    <p id="review-status" role="status" class="hint" aria-live="polite"></p>
+  </main>
+  <footer class="footer wrap">
+    <p>To apply for benefits, visit <a href="https://www.yourtexasbenefits.com/Learn/Home" rel="noopener noreferrer">Your Texas Benefits</a>.</p>
+  </footer>
+  <script src="../js/config.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/practice-sample.js"></script>
+  <script src="../apply/review.js"></script>
+</body>
+</html>

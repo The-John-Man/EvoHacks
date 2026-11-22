@@ -12,7 +12,7 @@
  * Privacy: MojoAuth only sees the email address used to sign in. Household answers are
  * saved in this browser only, under the signed-in user's ID, and never sent to a server.
  * OIDC tokens are kept in sessionStorage for this tab only (cleared when the tab closes);
- * they're used only to sign out of MojoAuth as well.
+ * the hosted practice flow also presents the ID token to Claimable's own review API.
  */
 (function (root) {
   "use strict";
@@ -36,6 +36,7 @@
   /** The folder the app is served from, e.g. "/" locally or "/EvoHacks/" on GitHub Pages. */
   function appBase(pathname) {
     let p = String(pathname || "/");
+    p = p.replace(/\/apply(?:\/(?:index\.html)?)?$/, "/");
     const i = p.indexOf("/auth/callback");
     if (i >= 0) p = p.slice(0, i + 1);
     else p = p.replace(/[^/]*$/, ""); // drop a trailing file name like index.html
@@ -118,6 +119,13 @@
     enabled,
     base,
     user() { return store.getSession(); },
+    async reviewToken() {
+      const session = Auth.user();
+      if (!enabled || !session) return null;
+      const user = await (await manager()).getUser();
+      if (!user || user.profile.sub !== session.userId || !(user.profile.exp > Date.now() / 1000)) return null;
+      return user.id_token || null;
+    },
     onChange(fn) { listeners.push(fn); },
     _emit() { listeners.forEach((fn) => fn(Auth.user())); },
 
@@ -141,7 +149,7 @@
       const intent = oidcUser.state || {};
       let saved = false;
       if (intent.save && intent.answers) saved = store.saveResults(session.userId, intent.answers);
-      return { session, saved };
+      return { session, saved, returnToReview: intent.returnTo === "apply" };
     },
 
     /** Clear the local session; also end the MojoAuth session if this tab still has the ID token. */
