@@ -50,14 +50,16 @@
     <!-- Sign in (optional) -->
     <section id="view-signin" class="view" hidden aria-labelledby="signin-title">
       <h1 id="signin-title">Sign in to save your checklist</h1>
-      <p class="lead">No password needed. Enter your email and we'll send you a one-time code.</p>
+      <p class="lead">No password needed. You'll go to our secure login partner, MojoAuth, enter your email, and type in the code they send you. Then you'll come right back here.</p>
       <ul class="trust">
-        <li><strong>What's shared:</strong> only your email, with our login provider (MojoAuth), to send the code.</li>
+        <li><strong>What's shared:</strong> only your email, with MojoAuth, to send the code.</li>
         <li><strong>What stays here:</strong> your household answers are saved in this browser only, never on a server.</li>
       </ul>
-      <div id="mojoauth-passwordless-form" class="mojo-form" aria-live="polite"></div>
+      <div class="signin-actions">
+        <button type="button" class="btn btn-primary btn-lg" id="signin-go">Continue to sign in</button>
+        <button type="button" class="btn btn-ghost" id="signin-cancel">Continue without an account</button>
+      </div>
       <p class="error" id="signin-error" role="alert" hidden></p>
-      <button type="button" class="btn btn-ghost" id="signin-cancel">Continue without an account</button>
     </section>
 
     <!-- Wizard -->

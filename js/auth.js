@@ -1,16 +1,18 @@
 /*
- * Claimable — optional passwordless sign-in with MojoAuth.
+ * Claimable — optional sign-in with MojoAuth over OpenID Connect.
+ *
+ * Flow: authorization code + PKCE (S256) + state, public client (no client secret;
+ * the token request authenticates with client_id only). Implemented with the standard
+ * browser OIDC library, oidc-client-ts, which validates the ID token's signature,
+ * issuer, audience, and nonce.
  *
  * Why login exists: so people can save their benefits checklist and come back to it
  * (for example after gathering documents). The screener itself never requires an account.
  *
- * Privacy: only the email address goes to MojoAuth, to send a one-time code.
- * Household answers are saved in this browser only, under the signed-in user's ID.
- * Nothing is sent to a Claimable server, because there isn't one.
- *
- * Limitation: with no backend, the MojoAuth token is not verified server-side.
- * That's acceptable here because the saved data never leaves the device. A version
- * that syncs across devices would need to verify the JWT on a server first.
+ * Privacy: MojoAuth only sees the email address used to sign in. Household answers are
+ * saved in this browser only, under the signed-in user's ID, and never sent to a server.
+ * OIDC tokens are kept in sessionStorage for this tab only (cleared when the tab closes);
+ * they're used only to sign out of MojoAuth as well.
  */
 (function (root) {
   "use strict";
@@ -18,18 +20,40 @@
   const SESSION_KEY = "claimable-session";
   const SAVED_PREFIX = "claimable-saved:";
   const SESSION_HOURS = 24 * 7;
+  const OIDC_LIB = "https://cdn.jsdelivr.net/npm/oidc-client-ts@3.1.0/dist/browser/oidc-client-ts.min.js";
+  const SCOPES = "openid profile email";
 
   // ---------- Pure helpers (unit tested in Node) ----------
 
-  /** Pull the user out of a MojoAuth signIn() response. Returns null if it isn't a successful login. */
-  function parseLoginResponse(res, now = Date.now()) {
-    if (!res || typeof res !== "object") return null;
-    if (res.authenticated === false) return null;
-    const user = res.user || {};
-    const email = user.identifier || user.email || null;
-    const userId = user.user_id || user.id || email;
-    if (!userId || !(res.oauth && res.oauth.access_token)) return null;
-    return { userId: String(userId), email: email ? String(email) : "", expiresAt: now + SESSION_HOURS * 3600 * 1000 };
+  /** Turn an oidc-client-ts User into our local session. Returns null unless it's a real sign-in. */
+  function sessionFromOidcUser(user, now = Date.now()) {
+    if (!user || typeof user !== "object") return null;
+    const p = user.profile || {};
+    if (!p.sub || !user.id_token) return null;
+    return { userId: String(p.sub), email: p.email ? String(p.email) : "", expiresAt: now + SESSION_HOURS * 3600 * 1000 };
+  }
+
+  /** The folder the app is served from, e.g. "/" locally or "/EvoHacks/" on GitHub Pages. */
+  function appBase(pathname) {
+    let p = String(pathname || "/");
+    const i = p.indexOf("/auth/callback");
+    if (i >= 0) p = p.slice(0, i + 1);
+    else p = p.replace(/[^/]*$/, ""); // drop a trailing file name like index.html
+    return p.startsWith("/") ? p : "/" + p;
+  }
+
+  /** Build the oidc-client-ts settings for a site at origin + base. */
+  function oidcSettings(cfg, origin, base) {
+    return {
+      authority: cfg.oidcIssuer,
+      client_id: cfg.oidcClientId,
+      redirect_uri: origin + base + "auth/callback",
+      post_logout_redirect_uri: origin + base,
+      response_type: "code", // authorization code flow; oidc-client-ts adds PKCE (S256) and state
+      scope: SCOPES,
+      loadUserInfo: false, // email comes from the ID token (scope "email")
+      automaticSilentRenew: false,
+    };
   }
 
   /** Wraps a Storage object (localStorage, or a fake in tests); never throws. */
@@ -51,64 +75,87 @@
     };
   }
 
-  const AuthCore = { parseLoginResponse, makeStore, SESSION_KEY, SAVED_PREFIX };
+  const AuthCore = { sessionFromOidcUser, appBase, oidcSettings, makeStore, SESSION_KEY, SAVED_PREFIX, SCOPES };
   root.ClaimableAuthCore = AuthCore;
   if (typeof module !== "undefined" && module.exports) { module.exports = AuthCore; return; }
 
-  // ---------- Browser: MojoAuth integration ----------
+  // ---------- Browser: OIDC with oidc-client-ts ----------
 
   const cfg = root.CLAIMABLE_CONFIG || {};
-  const apiKey = (cfg.mojoAuthApiKey || "").trim();
+  const enabled = !!((cfg.oidcIssuer || "").trim() && (cfg.oidcClientId || "").trim());
   let storage = null;
   try { storage = root.localStorage; } catch (_) { storage = null; }
   const store = makeStore(storage);
+  const base = appBase(root.location.pathname);
   const listeners = [];
-  let sdkPromise = null;
-  let pendingAfterLogin = null;
+  let libPromise = null;
+  let mgr = null;
 
-  function loadSdk() {
-    if (root.MojoAuth) return Promise.resolve();
-    if (sdkPromise) return sdkPromise;
-    sdkPromise = new Promise((resolve, reject) => {
+  function loadLib() {
+    if (root.oidc && root.oidc.UserManager) return Promise.resolve();
+    if (libPromise) return libPromise;
+    libPromise = new Promise((resolve, reject) => {
       const s = document.createElement("script");
-      s.src = "https://cdn.mojoauth.com/js/mojoauth.min.js";
-      s.charset = "UTF-8";
-      s.onload = () => (root.MojoAuth ? resolve() : reject(new Error("MojoAuth SDK did not load")));
-      s.onerror = () => { sdkPromise = null; reject(new Error("Couldn't reach the sign-in service. Check your connection.")); };
+      s.src = OIDC_LIB;
+      s.onload = () => (root.oidc && root.oidc.UserManager ? resolve() : reject(new Error("Sign-in library didn't load.")));
+      s.onerror = () => { libPromise = null; reject(new Error("Couldn't reach the sign-in service. Check your connection.")); };
       document.head.appendChild(s);
     });
-    return sdkPromise;
+    return libPromise;
+  }
+
+  async function manager() {
+    await loadLib();
+    if (!mgr) {
+      const settings = oidcSettings(cfg, root.location.origin, base);
+      settings.userStore = new root.oidc.WebStorageStateStore({ store: root.sessionStorage });
+      mgr = new root.oidc.UserManager(settings);
+    }
+    return mgr;
   }
 
   const Auth = {
-    enabled: !!apiKey,
+    enabled,
+    base,
     user() { return store.getSession(); },
     onChange(fn) { listeners.push(fn); },
     _emit() { listeners.forEach((fn) => fn(Auth.user())); },
 
-    /** Render MojoAuth's email-OTP form into #mojoauth-passwordless-form and wait for login. */
-    async startSignIn(afterLogin) {
-      if (!Auth.enabled) throw new Error("Sign-in isn't set up on this site.");
-      pendingAfterLogin = afterLogin || null;
-      await loadSdk();
-      const container = document.getElementById("mojoauth-passwordless-form");
-      if (container) container.innerHTML = "";
-      const mojoauth = new root.MojoAuth(apiKey, {
-        language: "en",
-        source: [{ type: "email", feature: "otp" }],
-      });
-      const res = await mojoauth.signIn();
-      const session = parseLoginResponse(res);
-      if (!session) throw new Error("Sign-in isn't available right now. You can keep using Claimable without an account.");
-      store.setSession(session);
-      Auth._emit();
-      const next = pendingAfterLogin;
-      pendingAfterLogin = null;
-      if (next) next(session);
-      return session;
+    /**
+     * Send the user to MojoAuth's hosted login page.
+     * intent.save + intent.answers: save this checklist as soon as they come back signed in.
+     */
+    async startSignIn(intent) {
+      if (!enabled) throw new Error("Sign-in isn't set up on this site.");
+      const m = await manager();
+      await m.signinRedirect({ state: intent || {} });
     },
 
-    signOut() { store.clearSession(); Auth._emit(); },
+    /** Runs on /auth/callback: exchange the code (with the PKCE verifier) and start our session. */
+    async completeSignIn() {
+      const m = await manager();
+      const oidcUser = await m.signinRedirectCallback();
+      const session = sessionFromOidcUser(oidcUser);
+      if (!session) throw new Error("Sign-in didn't return a valid user.");
+      store.setSession(session);
+      const intent = oidcUser.state || {};
+      let saved = false;
+      if (intent.save && intent.answers) saved = store.saveResults(session.userId, intent.answers);
+      return { session, saved };
+    },
+
+    /** Clear the local session; also end the MojoAuth session if this tab still has the ID token. */
+    async signOut() {
+      store.clearSession();
+      Auth._emit();
+      if (!enabled) return;
+      try {
+        const m = await manager();
+        const u = await m.getUser();
+        if (u && u.id_token) { await m.signoutRedirect({ id_token_hint: u.id_token }); return; }
+        await m.removeUser();
+      } catch (_) { /* local sign-out already happened */ }
+    },
 
     save(answers) {
       const u = Auth.user();

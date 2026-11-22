@@ -58,7 +58,7 @@ a { color: var(--brand); }
 @media (max-width: 520px) { .account-email { display: none; } }
 .welcome-back { background: var(--brand-soft); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; }
 .welcome-back p { margin: 0 0 10px; }
-.mojo-form { min-height: 120px; margin: 16px 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; }
+.signin-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 8px; }
 .save-status { background: var(--brand-soft); border-radius: 10px; padding: 10px 14px; font-weight: 600; }
 .linklike { background: none; border: 0; padding: 0; font: inherit; color: var(--brand); text-decoration: underline; cursor: pointer; min-height: 44px; }
 

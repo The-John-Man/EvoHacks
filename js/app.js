@@ -101,16 +101,20 @@
     refreshAuthUI();
   }
 
-  // ---------- Optional sign-in (MojoAuth) ----------
+  // ---------- Optional sign-in (MojoAuth, OpenID Connect) ----------
+  let pendingIntent = null;
+
   function initAuth() {
-    if (!Auth.enabled) return; // no API key configured: login stays hidden, app works as before
+    if (!Auth.enabled) return; // no issuer/client ID configured: login stays hidden, app works as before
     Auth.onChange(refreshAuthUI);
-    $("#sign-in").addEventListener("click", () => openSignIn(null));
-    $("#sign-out").addEventListener("click", () => { Auth.signOut(); $("#save-status").hidden = true; show("intro"); });
+    $("#sign-in").addEventListener("click", () => openSignIn({}));
+    $("#sign-out").addEventListener("click", () => { $("#save-status").hidden = true; show("intro"); Auth.signOut(); });
     $("#signin-cancel").addEventListener("click", () => show(returnView));
+    $("#signin-go").addEventListener("click", goToMojoAuth);
     $("#save").addEventListener("click", () => {
       if (Auth.user()) { saveChecklist(); return; }
-      openSignIn(() => { show("results"); saveChecklist(); });
+      // Carry the answers through the redirect so the checklist is saved the moment they're back.
+      openSignIn({ save: true, answers: readForm() });
     });
     $("#open-saved").addEventListener("click", () => {
       const saved = Auth.loadSaved();
@@ -125,26 +129,59 @@
       $("#save-status").hidden = false;
     });
     refreshAuthUI();
+    handleReturnFromLogin();
   }
 
-  function openSignIn(afterLogin) {
+  /** Back from /auth/callback: "#saved" means the checklist was saved during sign-in. */
+  function handleReturnFromLogin() {
+    const hash = window.location.hash;
+    if (hash !== "#saved" && hash !== "#signed-in") return;
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+    const u = Auth.user();
+    if (!u) return;
+    const saved = Auth.loadSaved();
+    if (hash === "#saved" && saved) {
+      fillForm(answersToForm(saved.answers));
+      runScreen();
+      showStatus(`Signed in and saved for ${u.email || "your account"}. Sign in here anytime to reopen it.`);
+    }
+  }
+
+  /** Show a short explainer first, so people know what's shared before leaving the site. */
+  function openSignIn(intent) {
     returnView = currentView === "signin" ? returnView : currentView;
+    pendingIntent = intent || {};
+    $("#signin-error").hidden = true;
     show("signin");
+    $("#signin-go").focus({ preventScroll: true });
+  }
+
+  function goToMojoAuth() {
+    const btn = $("#signin-go");
     const err = $("#signin-error");
+    btn.disabled = true;
+    btn.textContent = "Opening sign-in…";
     err.hidden = true;
-    Auth.startSignIn(afterLogin)
-      .then(() => { if (!afterLogin) show(returnView === "signin" ? "intro" : returnView); })
-      .catch((e) => { err.textContent = e.message || "Sign-in failed. Please try again."; err.hidden = false; });
+    Auth.startSignIn(pendingIntent).catch((e) => {
+      btn.disabled = false;
+      btn.textContent = "Continue to sign in";
+      err.textContent = (e && e.message) || "Sign-in isn't available right now. You can keep using Claimable without an account.";
+      err.hidden = false;
+    });
+  }
+
+  function showStatus(text) {
+    const status = $("#save-status");
+    status.textContent = text;
+    status.hidden = false;
   }
 
   function saveChecklist() {
     const u = Auth.user();
     const ok = Auth.save(readForm());
-    const status = $("#save-status");
-    status.textContent = ok
+    showStatus(ok
       ? `Saved on this device for ${u.email || "your account"}. Sign in here anytime to reopen it.`
-      : "Couldn't save. Your browser may be blocking storage (private mode?).";
-    status.hidden = false;
+      : "Couldn't save. Your browser may be blocking storage (private mode?).");
     refreshAuthUI();
   }
 

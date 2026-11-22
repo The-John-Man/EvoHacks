@@ -27,24 +27,32 @@ node --test tests/rules.test.js tests/auth.test.js
 
 The 12 rules tests check the eligibility math against hand-calculated cases (SNAP benefit formula, EITC phase-in and
 phase-out, the refundable Child Tax Credit, Medicaid expansion vs. non-expansion states, SSI income counting, and more).
-The 7 auth tests cover parsing MojoAuth's login response, session expiry, per-user saved checklists, and blocked storage.
+The 7 auth tests cover the OIDC settings (code flow, public client, redirect URIs), turning the signed-in user into a
+local session, the app's base path on GitHub Pages, session expiry, per-user saved checklists, and blocked storage.
 
-## Optional sign-in (MojoAuth)
+## Optional sign-in (MojoAuth, OpenID Connect)
 
-People can sign in with a one-time email code (passwordless, via [MojoAuth](https://mojoauth.com)) to **save their
-checklist and reopen it later**, for example after gathering documents. Signing in is never required to use the screener.
+People can sign in passwordlessly with [MojoAuth](https://mojoauth.com) to **save their checklist and reopen it later**,
+for example after gathering documents. Signing in is never required to use the screener.
 
-To turn it on:
-1. Create a free project in the MojoAuth dashboard.
-2. Add your site's URLs to the project's allowed domains (e.g. `http://localhost:5317` and your GitHub Pages URL).
-3. Enable **Email OTP** in the project's authentication settings.
-4. Paste the project's **API key** into `js/config.js`. It's a public browser key. Never put the API *secret* in this repo.
+**How it works:** OpenID Connect authorization code flow with **PKCE (S256)** and `state`, as a **public client**
+(no client secret; the token request sends only `client_id`, i.e. token endpoint auth method "none").
+It uses the standard browser OIDC library [oidc-client-ts](https://github.com/authts/oidc-client-ts), which also
+validates the ID token (signature, issuer, audience, nonce). Scopes: `openid profile email`.
 
-With no key set, the sign-in button stays hidden and the MojoAuth script is never loaded.
+1. The user clicks **Save my checklist** (or **Sign in**). Claimable explains what's shared, then redirects to MojoAuth's hosted login page.
+2. The user enters their email and the one-time code.
+3. MojoAuth redirects to `/auth/callback`, which exchanges the code using the PKCE verifier and saves the checklist if that's why they signed in.
+4. The user lands back on their results, with their email shown in the header.
 
-**Privacy:** only the email address goes to MojoAuth. Household answers are saved in that browser's local storage,
-keyed by the MojoAuth user ID, and never sent to a server. Users can delete their saved checklist with one click.
-The access token itself is not stored.
+**Setup:** set `oidcIssuer` and `oidcClientId` in `js/config.js`. Both are public values. This is a static site
+with no build step, so they live there instead of in environment variables. In the MojoAuth dashboard, allow these redirect URLs:
+`http://localhost:5321/auth/callback` (any localhost port works in test mode) and `https://<user>.github.io/<repo>/auth/callback`.
+Leave either value empty and sign-in is hidden.
+
+**Privacy:** MojoAuth only sees the email used to sign in. Household answers are saved in that browser's local storage,
+keyed by the user's OIDC `sub`, and never sent to a server. Users can delete their saved checklist with one click.
+OIDC tokens are kept in `sessionStorage` for that tab only, and are used only to sign out of MojoAuth too.
 
 ## How it works
 
@@ -54,8 +62,9 @@ styles.css     light/dark themes, large-text mode, print styles for the checklis
 js/data.js     every official number (2026 poverty guidelines, SNAP FY2027 tables, IRS 2026 limits), each with its source URL
 js/rules.js    the rules engine: one small, testable function per program that returns a status, reasons, and a value
 js/app.js      reads the form, calls Claimable.screen(), renders results, read-aloud, save/sign-in UI
-js/auth.js     optional MojoAuth passwordless sign-in + per-user saved checklists (local storage)
-js/config.js   site settings (MojoAuth public API key)
+js/auth.js     optional MojoAuth sign-in (OIDC + PKCE via oidc-client-ts) + per-user saved checklists
+js/config.js   site settings (OIDC issuer + client ID, both public)
+auth/callback/ OIDC redirect page: finishes sign-in, then returns to the app
 tests/         Node built-in test runner, no packages needed
 ```
 
@@ -78,8 +87,9 @@ Head Start, child care assistance, Pell Grant, TANF, SSI, housing vouchers, and 
 ## Limitations (please read)
 
 - These are **screening estimates**, not eligibility decisions. The agency that runs each program decides.
-- Saved checklists live in one browser. They don't sync across devices, because that would need a backend that verifies
-  MojoAuth's token server-side. With no server, the token isn't verified, which is acceptable only because saved data never leaves the device.
+- Saved checklists live in one browser. They don't sync across devices, because that would need a backend that
+  verifies the access token server-side and stores data. Today the ID token is checked only in the browser, which is
+  acceptable because saved data never leaves the device.
 - It uses federal rules. Many states have higher limits, extra programs, or different rules (TANF, child care, and LIHEAP vary the most).
 - Asset tests are not checked, except as a note for SSI.
 - Dollar values for WIC, school meals, and LIHEAP are national-average estimates, and they're labeled as such.

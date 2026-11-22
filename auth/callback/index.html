@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Signing you in · Claimable</title>
+  <meta name="referrer" content="no-referrer">
+  <link rel="stylesheet" href="../../styles.css">
+</head>
+<body>
+  <main class="wrap view" aria-live="polite">
+    <h1 id="msg">Signing you in…</h1>
+    <p class="lead" id="detail">One moment.</p>
+    <p id="home-wrap" hidden><a class="btn btn-primary" id="home" href="../../">Back to Claimable</a></p>
+  </main>
+  <script src="../../js/config.js"></script>
+  <script src="../../js/auth.js"></script>
+  <script>
+    (function () {
+      var Auth = window.ClaimableAuth;
+      var home = Auth.base;
+      function fail(text) {
+        document.getElementById("msg").textContent = "Sign-in didn't finish";
+        document.getElementById("detail").textContent = text;
+        document.getElementById("home").href = home;
+        document.getElementById("home-wrap").hidden = false;
+      }
+      var params = new URLSearchParams(location.search);
+      if (params.get("error")) {
+        // e.g. the user cancelled on MojoAuth's page
+        return fail(params.get("error_description") || "Sign-in was cancelled. You can keep using Claimable without an account.");
+      }
+      Auth.completeSignIn()
+        .then(function (r) { location.replace(home + (r.saved ? "#saved" : "#signed-in")); })
+        .catch(function (e) { fail((e && e.message) || "Please try again."); });
+    })();
+  </script>
+</body>
+</html>
